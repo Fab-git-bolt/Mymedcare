@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#2A6AA2" />
+  <meta name="description" content="My Med Care — votre sécurité médicale, partout, tout le temps." />
+  <title>My Med Care</title>
+  <link rel="icon" href="assets/logo.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="assets/logo.svg" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="app" id="app">
+    <header class="topbar">
+      <button class="icon-btn back" id="backBtn" aria-label="Retour" hidden></button>
+      <a class="brand" href="#/" aria-label="Accueil">
+        <img src="assets/logo.svg" alt="" width="36" height="36" />
+        <span>My Med <b>Care</b></span>
+      </a>
+      <div class="topbar-actions">
+        <a class="icon-btn" href="#/notifications" id="notifBtn" aria-label="Notifications"></a>
+        <button class="icon-btn" id="menuBtn" aria-label="Menu"></button>
+      </div>
+    </header>
+
+    <main id="view" class="view" tabindex="-1"></main>
+
+    <nav class="tabbar" id="tabbar" aria-label="Navigation principale"></nav>
+  </div>
+
+  <div class="drawer-backdrop" id="drawerBackdrop" hidden></div>
+  <aside class="drawer" id="drawer" aria-hidden="true"></aside>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>
