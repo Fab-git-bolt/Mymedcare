@@ -852,6 +852,7 @@
     $('#backBtn').hidden = name === '';
     renderChrome(route ? route.tab : null);
     window.scrollTo(0, 0);
+    $('#app').scrollTop = 0;
   }
 
   function renderChrome(activeTab) {

@@ -22,3 +22,7 @@ python3 -m http.server 8000
 ```
 
 Les données personnelles restent sur l'appareil (localStorage).
+
+## Démo client (cadre de téléphone)
+
+`python3 tools/build_preview.py` génère `preview.html` : un fichier unique, autonome, qui présente l'application dans un cadre de smartphone sur ordinateur (et en plein écran sur mobile).
