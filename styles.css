@@ -101,6 +101,7 @@ svg { display: block; }
 .brand img { border-radius: 10px; }
 .brand b { color: var(--teal-500); font-weight: 800; }
 .topbar-actions { margin-left: auto; display: flex; gap: 6px; }
+@media (max-width: 370px) { .brand span { display: none; } }
 .icon-btn {
   width: 42px; height: 42px; border-radius: 14px;
   display: grid; place-items: center; position: relative;

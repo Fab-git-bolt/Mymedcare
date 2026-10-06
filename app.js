@@ -46,6 +46,7 @@
     settings: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>',
     info: '<circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/>',
     check: '<path d="M20 6 9 17l-5-5"/>',
+    moon: '<path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9z"/>',
     message: '<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>',
   };
   const icon = (name, extra = '') =>
@@ -86,6 +87,7 @@
     contacts: store.get('contacts', DEFAULT_CONTACTS),
     meds: store.get('meds', DEFAULT_MEDS),
     readNotifs: store.get('readNotifs', false),
+    theme: store.get('theme', 'auto'),
     position: null,
     placesCache: {},
     tracking: store.get('tracking', false),
@@ -106,6 +108,7 @@
       call: 'Appeler', route: 'Itinéraire', search: 'Rechercher…', locating: 'Recherche autour de vous…', noResult: 'Aucun résultat pour le moment.',
       demo: 'Exemples affichés : autorisez la localisation (et une connexion internet) pour voir les établissements réels autour de vous.',
       edit: 'Modifier', save: 'Enregistrer', cancel: 'Annuler', saved: 'Enregistré ✓', add: 'Ajouter',
+      appearance: 'Apparence', themeAuto: 'Automatique', themeLight: 'Clair', themeDark: 'Sombre', toggleTheme: 'Mode clair ou sombre',
       language: 'Langue', allOptions: 'Toutes les fonctionnalités sont incluses et gratuites.',
     },
     en: {
@@ -119,6 +122,7 @@
       call: 'Call', route: 'Directions', search: 'Search…', locating: 'Searching around you…', noResult: 'No results yet.',
       demo: 'Showing examples: allow location access (and an internet connection) to see real places around you.',
       edit: 'Edit', save: 'Save', cancel: 'Cancel', saved: 'Saved ✓', add: 'Add',
+      appearance: 'Appearance', themeAuto: 'Automatic', themeLight: 'Light', themeDark: 'Dark', toggleTheme: 'Light or dark mode',
       language: 'Language', allOptions: 'Every feature is included and free.',
     },
   };
@@ -790,6 +794,10 @@
         <select id="setLang"><option value="fr" ${state.lang === 'fr' ? 'selected' : ''}>Français</option><option value="en" ${state.lang === 'en' ? 'selected' : ''}>English</option></select>
       </div>
     </div>
+    <div class="section-title">${t('appearance')}</div>
+    <div class="segmented" id="themeSeg" style="margin:0">
+      ${['auto', 'light', 'dark'].map((k) => `<button data-theme-opt="${k}" class="${state.theme === k ? 'active' : ''}">${t('theme' + k[0].toUpperCase() + k.slice(1))}</button>`).join('')}
+    </div>
     <div class="section-title">${t('about')}</div>
     <div class="card" style="display:flex;gap:14px;align-items:center">
       <img src="assets/logo.svg" alt="" width="56" height="56" style="border-radius:16px" />
@@ -802,6 +810,7 @@
     </div>`;
   function bindSettings() {
     $('#setLang').addEventListener('change', (e) => setLang(e.target.value));
+    document.querySelectorAll('[data-theme-opt]').forEach((b) => b.addEventListener('click', () => setTheme(b.dataset.themeOpt)));
     $('#resetData').addEventListener('click', () => { $('#resetConfirm').hidden = false; });
     $('#resetNo').addEventListener('click', () => { $('#resetConfirm').hidden = true; });
     $('#resetYes').addEventListener('click', () => {
@@ -858,6 +867,8 @@
   function renderChrome(activeTab) {
     $('#backBtn').innerHTML = icon('back');
     $('#menuBtn').innerHTML = icon('menu');
+    $('#themeBtn').innerHTML = icon(isDark() ? 'sun' : 'moon');
+    $('#themeBtn').setAttribute('aria-label', t('toggleTheme'));
     $('#notifBtn').innerHTML = icon('bell') + (state.readNotifs ? '' : '<span class="dot"></span>');
     const tabs = [
       { k: 'home', href: '#/', ic: 'home', label: t('home') },
@@ -901,6 +912,26 @@
     $('#drawerBackdrop').hidden = !open;
   }
 
+  /* Thème : automatique (réglage de l'appareil), clair ou sombre */
+  const HOST_THEME = document.documentElement.getAttribute('data-theme');
+  const darkQuery = window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)') : null;
+  function isDark() {
+    if (state.theme !== 'auto') return state.theme === 'dark';
+    if (HOST_THEME) return HOST_THEME === 'dark';
+    return !!(darkQuery && darkQuery.matches);
+  }
+  function applyTheme() {
+    const root = document.documentElement;
+    if (state.theme === 'auto') { if (HOST_THEME) root.setAttribute('data-theme', HOST_THEME); else root.removeAttribute('data-theme'); }
+    else root.setAttribute('data-theme', state.theme);
+    const btn = $('#themeBtn'); if (btn) btn.innerHTML = icon(isDark() ? 'sun' : 'moon');
+    document.querySelectorAll('[data-theme-opt]').forEach((b) => b.classList.toggle('active', b.dataset.themeOpt === state.theme));
+  }
+  function setTheme(theme) {
+    state.theme = theme; store.set('theme', theme);
+    applyTheme();
+  }
+
   function setLang(lang) {
     state.lang = lang; store.set('lang', lang);
     document.documentElement.lang = lang;
@@ -911,6 +942,9 @@
   /* Démarrage                                                           */
   /* ------------------------------------------------------------------ */
   document.documentElement.lang = state.lang;
+  applyTheme();
+  if (darkQuery && darkQuery.addEventListener) darkQuery.addEventListener('change', applyTheme);
+  $('#themeBtn').addEventListener('click', () => { setTheme(isDark() ? 'light' : 'dark'); toast(isDark() ? t('themeDark') : t('themeLight')); });
   $('#menuBtn').addEventListener('click', () => openDrawer(true));
   $('#drawerBackdrop').addEventListener('click', () => openDrawer(false));
   $('#drawer').addEventListener('click', (e) => { if (e.target.closest('a')) openDrawer(false); });
