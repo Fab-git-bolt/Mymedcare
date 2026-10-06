@@ -89,7 +89,10 @@
     readNotifs: store.get('readNotifs', false),
     theme: store.get('theme', 'auto'),
     position: null,
-    placesCache: {},
+    radius: store.get('radius', 20),
+    teleDocs: store.get('teleDocs', []),
+    countryAuto: store.get('countryAuto', true),
+    country: store.get('country', null),
     tracking: store.get('tracking', false),
   };
 
@@ -154,79 +157,99 @@
   }
   const fmtDist = (km) => (km < 1 ? Math.round(km * 1000) + ' m' : km.toFixed(1).replace('.', ',') + ' km');
 
+  let locating = null;
   function locate() {
     if (state.position) return Promise.resolve(state.position);
-    return new Promise((resolve) => {
-      if (!navigator.geolocation) return resolve(null);
+    // Localisation refusée ou indisponible récemment : on ne redemande pas tout de suite
+    if (state.geoFailAt && Date.now() - state.geoFailAt < 5 * 60000) return Promise.resolve(null);
+    if (locating) return locating;
+    locating = new Promise((resolve) => {
+      const done = (pos) => { locating = null; if (!pos) state.geoFailAt = Date.now(); resolve(pos); };
+      if (!navigator.geolocation) return done(null);
       // Filet de sécurité : la demande d'autorisation peut rester sans réponse
-      const guard = setTimeout(() => resolve(null), 12000);
+      const guard = setTimeout(() => done(null), 12000);
       navigator.geolocation.getCurrentPosition(
-        (p) => { clearTimeout(guard); state.position = { lat: p.coords.latitude, lon: p.coords.longitude, alt: p.coords.altitude, acc: p.coords.accuracy }; resolve(state.position); },
-        () => { clearTimeout(guard); resolve(null); },
+        (p) => { clearTimeout(guard); state.position = { lat: p.coords.latitude, lon: p.coords.longitude, alt: p.coords.altitude, acc: p.coords.accuracy }; done(state.position); },
+        () => { clearTimeout(guard); done(null); },
         { enableHighAccuracy: true, timeout: 8000, maximumAge: 60000 },
       );
     });
+    return locating;
   }
 
   /* ------------------------------------------------------------------ */
-  /* Données : établissements (OpenStreetMap / Overpass)                 */
+  /* Données : établissements partenaires                                */
   /* ------------------------------------------------------------------ */
+  // Les hôpitaux, pharmacies et médecins sont référencés par l'équipe My Med Care
+  // (partenariats) : l'utilisateur ne les ajoute pas. L'application affiche ceux
+  // situés dans un rayon de 20 ou 50 km autour de la position du téléphone,
+  // quel que soit le pays. Pour ce prototype, l'annuaire est généré à partir de
+  // villes réelles avec des établissements fictifs (en production : back-office).
   const PLACE_TYPES = {
-    hospitals: { title: 'hospitals', icon: 'hospital', color: 'c-blue', query: 'nwr["amenity"="hospital"]' },
-    pharmacies: { title: 'pharmacies', icon: 'pharmacy', color: 'c-green', query: 'nwr["amenity"="pharmacy"]' },
-    doctors: { title: 'doctors', icon: 'doctor', color: 'c-teal', query: 'nwr["amenity"~"doctors|clinic"]' },
+    hospitals: { title: 'hospitals', icon: 'hospital', color: 'c-blue' },
+    pharmacies: { title: 'pharmacies', icon: 'pharmacy', color: 'c-green' },
+    doctors: { title: 'doctors', icon: 'doctor', color: 'c-teal' },
   };
-  const DEMO_PLACES = {
+  // [ville, lat, lon] — la première est la ville de référence du pays
+  const PARTNER_TOWNS = {
+    FR: [['Paris', 48.8566, 2.3522], ['Boulogne-Billancourt', 48.8397, 2.2399], ['Saint-Denis', 48.9362, 2.3574], ['Versailles', 48.8049, 2.1204], ['Créteil', 48.7904, 2.4556], ['Meaux', 48.9601, 2.8788], ['Fontainebleau', 48.4047, 2.7016]],
+    BE: [['Bruxelles', 50.8503, 4.3517], ['Ixelles', 50.8333, 4.3667], ['Uccle', 50.8000, 4.3333], ['Vilvorde', 50.9281, 4.4253], ['Louvain', 50.8798, 4.7005], ['Malines', 51.0259, 4.4776], ['Namur', 50.4674, 4.8720]],
+    LU: [['Luxembourg', 49.6116, 6.1319], ['Esch-sur-Alzette', 49.4958, 5.9806], ['Ettelbruck', 49.8475, 6.1042], ['Echternach', 49.8117, 6.4214]],
+    CH: [['Genève', 46.2044, 6.1432], ['Carouge', 46.1840, 6.1390], ['Nyon', 46.3833, 6.2396], ['Morges', 46.5113, 6.4985], ['Lausanne', 46.5197, 6.6323]],
+    ES: [['Madrid', 40.4168, -3.7038], ['Getafe', 40.3083, -3.7327], ['Alcobendas', 40.5475, -3.6420], ['Alcalá de Henares', 40.4818, -3.3643], ['Móstoles', 40.3223, -3.8650], ['Aranjuez', 40.0311, -3.6025], ['Tolède', 39.8628, -4.0273]],
+    PT: [['Lisbonne', 38.7223, -9.1393], ['Oeiras', 38.6970, -9.3110], ['Sintra', 38.8029, -9.3817], ['Almada', 38.6790, -9.1569], ['Cascais', 38.6979, -9.4215], ['Setúbal', 38.5244, -8.8882]],
+    IT: [['Rome', 41.9028, 12.4964], ['Ostie', 41.7330, 12.2890], ['Tivoli', 41.9637, 12.7980], ['Frascati', 41.8075, 12.6800], ['Fiumicino', 41.7700, 12.2370], ['Civitavecchia', 42.0930, 11.7960]],
+    DE: [['Berlin', 52.5200, 13.4050], ['Potsdam', 52.3906, 13.0645], ['Spandau', 52.5352, 13.1999], ['Oranienburg', 52.7545, 13.2370], ['Königs Wusterhausen', 52.3010, 13.6330], ['Brandebourg-sur-la-Havel', 52.4125, 12.5316]],
+    AT: [['Innsbruck', 47.2692, 11.4041], ['Hall in Tirol', 47.2830, 11.5080], ['Seefeld', 47.3300, 11.1870], ['Schwaz', 47.3500, 11.7000], ['Neustift im Stubaital', 47.1100, 11.3060], ['Kufstein', 47.5830, 12.1700]],
+    NL: [['Amsterdam', 52.3676, 4.9041], ['Haarlem', 52.3874, 4.6462], ['Amstelveen', 52.3114, 4.8701], ['Zaandam', 52.4420, 4.8292], ['Utrecht', 52.0907, 5.1214], ['Leyde', 52.1601, 4.4970]],
+    GR: [['Athènes', 37.9838, 23.7275], ['Le Pirée', 37.9420, 23.6465], ['Kifissia', 38.0742, 23.8115], ['Glyfada', 37.8650, 23.7530], ['Marathon', 38.1530, 23.9630], ['Lavrio', 37.7140, 24.0560], ['Corinthe', 37.9407, 22.9527]],
+    HR: [['Split', 43.5081, 16.4402], ['Solin', 43.5400, 16.4900], ['Trogir', 43.5170, 16.2510], ['Omiš', 43.4440, 16.6890], ['Makarska', 43.2970, 17.0170]],
+    GB: [['Londres', 51.5072, -0.1276], ['Croydon', 51.3762, -0.0982], ['Watford', 51.6565, -0.3903], ['Richmond', 51.4613, -0.3037], ['Guildford', 51.2362, -0.5704], ['Brighton', 50.8225, -0.1372]],
+    IE: [['Dublin', 53.3498, -6.2603], ['Dún Laoghaire', 53.2940, -6.1340], ['Swords', 53.4597, -6.2181], ['Bray', 53.2028, -6.0983]],
+    MA: [['Marrakech', 31.6295, -7.9811], ['Tahannaout', 31.3510, -7.9500], ['Aït Ourir', 31.5640, -7.6620], ['Imlil', 31.1360, -7.9190]],
+    TN: [['Tunis', 36.8065, 10.1815], ['La Marsa', 36.8782, 10.3247], ['Ariana', 36.8625, 10.1956], ['Hammamet', 36.4000, 10.6167]],
+    US: [['New York', 40.7128, -74.0060], ['Jersey City', 40.7178, -74.0431], ['Yonkers', 40.9312, -73.8988], ['Hempstead', 40.7062, -73.6187], ['White Plains', 41.0340, -73.7629]],
+    CA: [['Montréal', 45.5019, -73.5674], ['Laval', 45.6066, -73.7124], ['Longueuil', 45.5312, -73.5181], ['Saint-Jérôme', 45.7804, -74.0036]],
+  };
+  const PARTNER_TEMPLATES = {
     hospitals: [
-      { name: 'Hôpital Européen Georges-Pompidou', addr: '20 Rue Leblanc, Paris 15e', phone: '+33 1 56 09 20 00', d: 1.2, lat: 48.8389, lon: 2.2737, tag: 'Urgences 24h/24' },
-      { name: 'Hôpital Necker – Enfants malades', addr: '149 Rue de Sèvres, Paris 15e', phone: '+33 1 44 49 40 00', d: 2.4, lat: 48.8462, lon: 2.3156, tag: 'Pédiatrie' },
-      { name: 'Hôpital Cochin', addr: '27 Rue du Faubourg Saint-Jacques, Paris 14e', phone: '+33 1 58 41 41 41', d: 3.8, lat: 48.8378, lon: 2.3398, tag: 'Urgences 24h/24' },
+      (c) => ({ name: `Hôpital universitaire de ${c}`, tag: 'Urgences 24h/24' }),
+      (c) => ({ name: `Clinique internationale de ${c}`, tag: 'Patients étrangers' }),
+      (c) => ({ name: `Centre hospitalier de ${c}`, tag: 'Urgences 24h/24' }),
     ],
     pharmacies: [
-      { name: 'Pharmacie du Marché', addr: '12 Rue du Commerce, Paris 15e', phone: '+33 1 45 78 00 00', d: 0.3, lat: 48.8467, lon: 2.2961, tag: 'Ouverte' },
-      { name: 'Grande Pharmacie de la Gare', addr: '3 Place de la Gare', phone: '+33 1 40 00 00 00', d: 0.9, lat: 48.8414, lon: 2.3212, tag: 'Garde de nuit' },
-      { name: 'Pharmacie Centrale', addr: '45 Avenue Émile Zola', phone: '+33 1 45 77 00 00', d: 1.5, lat: 48.8475, lon: 2.2911, tag: 'Ouverte' },
+      (c) => ({ name: `Pharmacie centrale de ${c}`, tag: 'Ouverte 7j/7' }),
+      (c) => ({ name: `Pharmacie de la Gare — ${c}`, tag: 'Garde de nuit' }),
+      (c) => ({ name: `Pharmacie du Marché — ${c}`, tag: '' }),
     ],
     doctors: [
-      { name: 'Dr Claire Dubois — Médecin généraliste', addr: '8 Rue Cambronne, Paris 15e', phone: '+33 1 23 45 67 89', d: 0.6, lat: 48.8455, lon: 2.3030, tag: 'Disponible aujourd’hui' },
-      { name: 'Centre médical Vaugirard', addr: '210 Rue de Vaugirard, Paris 15e', phone: '+33 1 47 34 00 00', d: 1.1, lat: 48.8411, lon: 2.3078, tag: 'Sans rendez-vous' },
-      { name: 'Dr Marc Leroy — Dermatologue', addr: '19 Bd Pasteur, Paris 15e', phone: '+33 1 43 06 00 00', d: 1.7, lat: 48.8426, lon: 2.3133, tag: 'Spécialiste' },
+      (c) => ({ name: `Centre médical international — ${c}`, tag: 'Sans rendez-vous', specialty: 'Médecine générale' }),
+      (c) => ({ name: `Cabinet de pédiatrie — ${c}`, tag: '', specialty: 'Pédiatre' }),
+      (c) => ({ name: `Cabinet médical de ${c}`, tag: 'Parle anglais', specialty: 'Médecin généraliste' }),
     ],
   };
-
-  async function fetchPlaces(type) {
-    if (state.placesCache[type]) return state.placesCache[type];
-    const pos = await locate();
-    if (!pos) return { demo: true, items: DEMO_PLACES[type] };
-    const q = `[out:json][timeout:20];(${PLACE_TYPES[type].query}(around:6000,${pos.lat},${pos.lon}););out center 40;`;
-    try {
-      const ctrl = new AbortController();
-      const timer = setTimeout(() => ctrl.abort(), 10000);
-      const res = await fetch('https://overpass-api.de/api/interpreter', { method: 'POST', body: 'data=' + encodeURIComponent(q), signal: ctrl.signal });
-      clearTimeout(timer);
-      if (!res.ok) throw new Error(res.status);
-      const json = await res.json();
-      const items = json.elements
-        .map((e) => {
-          const lat = e.lat ?? e.center?.lat, lon = e.lon ?? e.center?.lon, tg = e.tags || {};
-          if (lat == null || !tg.name) return null;
-          const addr = [tg['addr:housenumber'], tg['addr:street'], tg['addr:city']].filter(Boolean).join(' ');
-          return {
-            name: tg.name, addr: addr || tg['addr:full'] || '', phone: tg.phone || tg['contact:phone'] || '',
-            lat, lon, d: distanceKm(pos, { lat, lon }),
-            tag: tg.emergency === 'yes' ? 'Urgences' : tg.opening_hours === '24/7' ? '24h/24' : (tg['healthcare:speciality'] || ''),
-          };
-        })
-        .filter(Boolean)
-        .sort((a, b) => a.d - b.d)
-        .slice(0, 25);
-      const out = items.length ? { demo: false, items } : { demo: true, items: DEMO_PLACES[type] };
-      state.placesCache[type] = out;
-      return out;
-    } catch {
-      return { demo: true, items: DEMO_PLACES[type] };
-    }
-  }
+  // Annuaire : 2 établissements dans la ville de référence, 1 par ville voisine
+  const PARTNERS = (() => {
+    const out = [];
+    Object.entries(PARTNER_TOWNS).forEach(([country, towns]) => {
+      Object.entries(PARTNER_TEMPLATES).forEach(([type, tpls]) => {
+        towns.forEach(([town, lat, lon], i) => {
+          const picks = i === 0 ? [0, 1] : [(i + 1) % tpls.length];
+          picks.forEach((k, j) => {
+            const off = (i * 3 + j * 5 + k + type.length) % 7;
+            out.push({
+              id: `${country}-${type}-${i}-${j}`, country, type, town,
+              lat: lat + (off - 3) * 0.004, lon: lon + ((off * 2) % 7 - 3) * 0.005,
+              ...tpls[k](town),
+            });
+          });
+        });
+      });
+    });
+    return out;
+  })();
+  const RADII = [20, 50];
+  const SPECIALTIES = ['Médecin généraliste', 'Pédiatre', 'Cardiologue', 'Dermatologue', 'Gynécologue', 'Ophtalmologue', 'ORL', 'Dentiste', 'Kinésithérapeute', 'Psychiatre', 'Autre spécialité'];
 
   /* ------------------------------------------------------------------ */
   /* Données : traduction                                                */
@@ -249,13 +272,86 @@
     { cat: 'pharmacie', fr: 'Faut-il une ordonnance ?', en: 'Do I need a prescription?', es: '¿Necesito receta?', de: 'Brauche ich ein Rezept?', it: 'Serve la ricetta?', pt: 'Preciso de receita?' },
     { cat: 'pharmacie', fr: 'Combien de fois par jour ?', en: 'How many times a day?', es: '¿Cuántas veces al día?', de: 'Wie oft am Tag?', it: 'Quante volte al giorno?', pt: 'Quantas vezes por dia?' },
   ];
+  /* ------------------------------------------------------------------ */
+  /* Pays : numéros d'urgence et format de date (la langue reste celle   */
+  /* de l'utilisateur, quel que soit le pays)                            */
+  /* ------------------------------------------------------------------ */
+  // n = numéro, l = libellé. « main » est le numéro composé par le bouton SOS.
+  const COUNTRIES = {
+    FR: { name: 'France', flag: '🇫🇷', locale: 'fr-FR', prefix: '+33', main: '112', tz: ['Europe/Paris'],
+      numbers: [['112', 'Urgence européenne'], ['15', 'SAMU (médical)'], ['18', 'Pompiers'], ['17', 'Police'], ['114', 'Sourds / SMS'], ['3237', 'Pharmacie de garde']],
+      mountain: ['112', 'PGHM / secours en montagne via le 112'] },
+    BE: { name: 'Belgique', flag: '🇧🇪', locale: 'fr-BE', prefix: '+32', main: '112', tz: ['Europe/Brussels'],
+      numbers: [['112', 'Ambulance & pompiers'], ['101', 'Police'], ['1733', 'Médecin de garde'], ['070 245 245', 'Centre antipoisons'], ['0903 99 000', 'Pharmacie de garde'], ['1813', 'Prévention suicide']],
+      mountain: ['112', 'Secours via le 112'] },
+    LU: { name: 'Luxembourg', flag: '🇱🇺', locale: 'fr-LU', prefix: '+352', main: '112', tz: ['Europe/Luxembourg'],
+      numbers: [['112', 'Ambulance & pompiers'], ['113', 'Police'], ['8002 5500', 'Centre antipoisons']],
+      mountain: ['112', 'Secours via le 112'] },
+    CH: { name: 'Suisse', flag: '🇨🇭', locale: 'fr-CH', prefix: '+41', main: '144', tz: ['Europe/Zurich'],
+      numbers: [['144', 'Ambulance'], ['112', 'Urgence européenne'], ['117', 'Police'], ['118', 'Pompiers'], ['1414', 'Rega (sauvetage aérien)'], ['145', 'Tox Info (poisons)']],
+      mountain: ['1414', 'Rega — sauvetage en montagne (1415 en Valais : 144)'] },
+    ES: { name: 'Espagne', flag: '🇪🇸', locale: 'es-ES', prefix: '+34', main: '112', tz: ['Europe/Madrid', 'Atlantic/Canary', 'Africa/Ceuta'],
+      numbers: [['112', 'Urgences'], ['061', 'Urgences médicales'], ['091', 'Police nationale'], ['062', 'Guardia Civil'], ['080', 'Pompiers'], ['092', 'Police municipale']],
+      mountain: ['112', 'Guardia Civil (GREIM) via le 112'] },
+    PT: { name: 'Portugal', flag: '🇵🇹', locale: 'pt-PT', prefix: '+351', main: '112', tz: ['Europe/Lisbon', 'Atlantic/Madeira', 'Atlantic/Azores'],
+      numbers: [['112', 'Urgences'], ['808 24 24 24', 'SNS 24 (conseil médical)'], ['800 250 250', 'Centre antipoisons'], ['117', 'Feux de forêt']],
+      mountain: ['112', 'Secours via le 112'] },
+    IT: { name: 'Italie', flag: '🇮🇹', locale: 'it-IT', prefix: '+39', main: '112', tz: ['Europe/Rome'],
+      numbers: [['112', 'Urgence européenne'], ['118', 'Ambulance'], ['113', 'Police'], ['115', 'Pompiers'], ['1530', 'Garde côtière'], ['1515', 'Feux de forêt']],
+      mountain: ['118', 'Soccorso Alpino via le 118'] },
+    DE: { name: 'Allemagne', flag: '🇩🇪', locale: 'de-DE', prefix: '+49', main: '112', tz: ['Europe/Berlin'],
+      numbers: [['112', 'Ambulance & pompiers'], ['110', 'Police'], ['116 117', 'Médecin de garde'], ['19240', 'Centre antipoisons (Berlin)']],
+      mountain: ['112', 'Bergwacht via le 112'] },
+    AT: { name: 'Autriche', flag: '🇦🇹', locale: 'de-AT', prefix: '+43', main: '112', tz: ['Europe/Vienna'],
+      numbers: [['112', 'Urgence européenne'], ['144', 'Ambulance'], ['133', 'Police'], ['122', 'Pompiers'], ['140', 'Secours en montagne'], ['141', 'Médecin de garde']],
+      mountain: ['140', 'Bergrettung — secours en montagne'] },
+    NL: { name: 'Pays-Bas', flag: '🇳🇱', locale: 'nl-NL', prefix: '+31', main: '112', tz: ['Europe/Amsterdam'],
+      numbers: [['112', 'Urgences'], ['0900 8844', 'Police (non urgent)'], ['113', 'Prévention suicide']],
+      mountain: ['112', 'Secours via le 112'] },
+    GR: { name: 'Grèce', flag: '🇬🇷', locale: 'el-GR', prefix: '+30', main: '112', tz: ['Europe/Athens'],
+      numbers: [['112', 'Urgence européenne'], ['166', 'Ambulance (EKAB)'], ['100', 'Police'], ['199', 'Pompiers'], ['1571', 'Police touristique'], ['108', 'Garde côtière']],
+      mountain: ['112', 'Secours via le 112 (EKAB 166)'] },
+    HR: { name: 'Croatie', flag: '🇭🇷', locale: 'hr-HR', prefix: '+385', main: '112', tz: ['Europe/Zagreb'],
+      numbers: [['112', 'Urgences'], ['194', 'Ambulance'], ['192', 'Police'], ['193', 'Pompiers'], ['195', 'Secours en mer']],
+      mountain: ['112', 'HGSS (secours en montagne) via le 112'] },
+    GB: { name: 'Royaume-Uni', flag: '🇬🇧', locale: 'en-GB', prefix: '+44', main: '999', tz: ['Europe/London'],
+      numbers: [['999', 'Urgences'], ['112', 'Urgences (fonctionne aussi)'], ['111', 'NHS (conseil médical)'], ['101', 'Police (non urgent)']],
+      mountain: ['999', 'Demander « Police », puis « Mountain Rescue »'] },
+    IE: { name: 'Irlande', flag: '🇮🇪', locale: 'en-IE', prefix: '+353', main: '112', tz: ['Europe/Dublin'],
+      numbers: [['112', 'Urgences'], ['999', 'Urgences']],
+      mountain: ['112', 'Demander « Garda », puis « Mountain Rescue »'] },
+    MA: { name: 'Maroc', flag: '🇲🇦', locale: 'fr-MA', prefix: '+212', main: '15', tz: ['Africa/Casablanca'],
+      numbers: [['15', 'Ambulance & pompiers'], ['19', 'Police'], ['177', 'Gendarmerie royale'], ['112', 'Urgences (depuis un mobile)']],
+      mountain: ['177', 'Gendarmerie royale'] },
+    TN: { name: 'Tunisie', flag: '🇹🇳', locale: 'fr-TN', prefix: '+216', main: '190', tz: ['Africa/Tunis'],
+      numbers: [['190', 'SAMU'], ['197', 'Police'], ['198', 'Pompiers / protection civile']],
+      mountain: ['198', 'Protection civile'] },
+    US: { name: 'États-Unis', flag: '🇺🇸', locale: 'en-US', prefix: '+1', main: '911', tz: ['America/New_York', 'America/Chicago', 'America/Denver', 'America/Los_Angeles', 'America/Phoenix', 'America/Anchorage', 'Pacific/Honolulu'],
+      numbers: [['911', 'Urgences'], ['1-800-222-1222', 'Centre antipoisons'], ['988', 'Détresse / suicide']],
+      mountain: ['911', 'Secours via le 911'] },
+    CA: { name: 'Canada', flag: '🇨🇦', locale: 'fr-CA', prefix: '+1', main: '911', tz: ['America/Toronto', 'America/Montreal', 'America/Vancouver', 'America/Edmonton', 'America/Winnipeg', 'America/Halifax'],
+      numbers: [['911', 'Urgences'], ['811', 'Info-Santé (conseil médical)']],
+      mountain: ['911', 'Secours via le 911'] },
+  };
+  function detectCountry() {
+    try {
+      const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      const hit = Object.keys(COUNTRIES).find((k) => COUNTRIES[k].tz.includes(tz));
+      if (hit) return hit;
+    } catch { /* Intl indisponible */ }
+    const region = (navigator.language || '').split('-')[1];
+    return region && COUNTRIES[region.toUpperCase()] ? region.toUpperCase() : 'FR';
+  }
+  const C = () => COUNTRIES[state.country] || COUNTRIES.FR;
+  const fmtDate = (d, opts) => new Date(d).toLocaleDateString(C().locale, opts);
+  const urg = (txt) => txt.replace(/\b112\b/g, C().main);
   const PHRASE_CATS = { all: 'Tout', urgence: 'Urgence', symptomes: 'Symptômes', infos: 'Mon état', pharmacie: 'Pharmacie' };
 
   /* ------------------------------------------------------------------ */
   /* Données : premiers secours                                          */
   /* ------------------------------------------------------------------ */
   const FIRST_AID = [
-    { icon: 'heart', color: 'c-red', title: 'Arrêt cardiaque', steps: ['Appelez le 112 (ou 15 en France) et demandez un défibrillateur.', 'Allongez la victime sur le dos, sur une surface dure.', 'Mains au centre de la poitrine, bras tendus.', 'Compressions : 100 à 120 par minute, 5 à 6 cm de profondeur.', 'Utilisez le défibrillateur dès qu’il arrive et suivez ses instructions.'] },
+    { icon: 'heart', color: 'c-red', title: 'Arrêt cardiaque', steps: ['Appelez le 112 et demandez un défibrillateur.', 'Allongez la victime sur le dos, sur une surface dure.', 'Mains au centre de la poitrine, bras tendus.', 'Compressions : 100 à 120 par minute, 5 à 6 cm de profondeur.', 'Utilisez le défibrillateur dès qu’il arrive et suivez ses instructions.'] },
     { icon: 'activity', color: 'c-amber', title: 'Étouffement', steps: ['Demandez à la personne de tousser.', 'Si elle ne peut pas : 5 claques dans le dos, entre les omoplates.', 'Puis 5 compressions abdominales (méthode de Heimlich).', 'Alternez jusqu’à expulsion du corps étranger. Appelez le 112 si inefficace.'] },
     { icon: 'droplet', color: 'c-red', title: 'Hémorragie', steps: ['Appuyez fortement sur la plaie avec un tissu propre.', 'Allongez la victime.', 'Appelez le 112.', 'Maintenez la compression sans relâcher jusqu’à l’arrivée des secours.'] },
     { icon: 'flame', color: 'c-amber', title: 'Brûlure', steps: ['Refroidissez à l’eau tempérée pendant 20 minutes.', 'Retirez bijoux et vêtements non collés.', 'Ne percez pas les cloques, n’appliquez ni glace ni corps gras.', 'Consultez si la brûlure est étendue, profonde ou au visage.'] },
@@ -290,6 +386,7 @@
           <div><small>${t('hello')} 👋</small><h1>${esc(p.firstName)} ${esc(p.lastName)}</h1></div>
         </div>
         <div class="hero-meta">
+          <a class="chip chip-link" href="#/country">${C().flag} ${esc(C().name)} · SOS ${esc(C().main)}</a>
           <span class="chip">${icon('droplet')} ${esc(p.blood || '—')}</span>
           <span class="chip">${icon('info')} ${splitList(p.allergies).length} allergie(s)</span>
           <span class="chip">${icon('users')} ${state.contacts.length} proche(s)</span>
@@ -333,23 +430,19 @@
     return `
       <div class="sos-page">
         <h1 class="page-title">Urgence</h1>
-        <p class="page-sub">Appuyez sur le bouton : après 5 secondes, l’appel au 112 est lancé et vos proches reçoivent votre position.</p>
+        <p class="page-sub">Appuyez sur le bouton : après 5 secondes, l’appel au ${C().main} est lancé. Vous pouvez ensuite prévenir vos proches.</p>
+        <a class="country-pill" href="#/country">${C().flag} ${esc(C().name)} · numéros locaux <span>Changer</span></a>
         <button class="sos-big" id="sosBig" aria-label="Déclencher l'alerte SOS"><div><span id="sosLabel">SOS</span><small id="sosSmall">APPUYER</small></div></button>
         <button class="btn ghost block" id="sosCancel" hidden>${t('cancel')}</button>
         <div class="card" id="sosCall" hidden style="text-align:left">
-          <strong>Appelez maintenant le 112</strong>
+          <strong>Appelez maintenant le ${C().main}</strong>
           <p class="note" style="margin:4px 0 12px">Si l\u2019appel ne s\u2019est pas lancé, composez le numéro vous-même, puis prévenez vos proches ci-dessous.</p>
-          <a class="btn red block" href="tel:112">${icon('phone')} 112</a>
+          <a class="btn red block" href="${tel(C().main)}">${icon('phone')} ${C().main}</a>
         </div>
       </div>
-      <div class="section-title">Numéros d’urgence</div>
+      <div class="section-title">Numéros d’urgence · ${C().flag} ${esc(C().name)} <a href="#/country">Changer</a></div>
       <div class="emergency-grid">
-        <a href="tel:112"><b>112</b><small>Urgence UE</small></a>
-        <a href="tel:15"><b>15</b><small>SAMU</small></a>
-        <a href="tel:18"><b>18</b><small>Pompiers</small></a>
-        <a href="tel:17"><b>17</b><small>Police</small></a>
-        <a href="tel:114"><b>114</b><small>Sourds / SMS</small></a>
-        <a href="tel:3237"><b>3237</b><small>Pharmacie de garde</small></a>
+        ${C().numbers.map(([n, l]) => `<a href="${tel(n)}"><b class="${n.length > 5 ? 'long' : ''}">${esc(n)}</b><small>${esc(l)}</small></a>`).join('')}
       </div>
       <div class="section-title">Alerter mes proches <a href="#/contacts">Gérer</a></div>
       <div class="list">
@@ -378,7 +471,7 @@
         if (n > 0) { label.textContent = n; if (navigator.vibrate) navigator.vibrate(120); return; }
         reset();
         $('#sosCall').hidden = false;
-        window.location.href = 'tel:112';
+        window.location.href = tel(C().main);
       }, 1000);
     });
     cancel.addEventListener('click', () => { reset(); toast('Alerte annulée'); });
@@ -393,15 +486,60 @@
     try { await navigator.clipboard.writeText(text); toast('Message copié dans le presse-papiers'); } catch { toast(pos ? 'Position : ' + link : 'Position indisponible'); }
   }
 
-  /* --- Établissements --- */
+  /* --- Établissements partenaires --- */
+  // Temps de trajet estimé à partir de la distance à vol d'oiseau
+  // (détour routier ≈ ×1,3 ; 4,5 km/h à pied ; 50 km/h en voiture)
+  const fmtMin = (m) => (m < 60 ? Math.max(1, Math.round(m)) + ' min' : Math.floor(m / 60) + ' h ' + String(Math.round(m % 60)).padStart(2, '0'));
+  const travel = (km) => (km <= 1.5
+    ? { mode: 'à pied', time: fmtMin((km * 1.3) / 4.5 * 60) }
+    : { mode: 'en voiture', time: fmtMin((km * 1.3) / 50 * 60 + 3) });
+
+  function placeItem(x, cfg) {
+    const tr = travel(x.d);
+    const badges = [
+      x.specialty ? `<em class="badge info">${esc(x.specialty)}</em>` : '',
+      x.tag ? `<em class="badge ${/urgence|24|ouvert|garde|sans/i.test(x.tag) ? 'open' : 'info'}">${esc(x.tag)}</em>` : '',
+    ].join('');
+    return `
+      <div class="item place-item">
+        <div class="ico ${cfg.color}">${icon(cfg.icon)}</div>
+        <a class="body item-link" href="#/place/${esc(x.id)}">
+          <strong>${esc(x.name)}</strong>
+          <span>${esc(x.town)} ${COUNTRIES[x.country] ? COUNTRIES[x.country].flag : ''} · <u>Voir la fiche</u></span>
+          ${badges ? `<span class="badges">${badges}</span>` : ''}
+        </a>
+        <a class="dist" href="#/place/${esc(x.id)}" aria-label="À ${fmtDist(x.d)} de vous, environ ${tr.time} ${tr.mode}">
+          <b>${fmtDist(x.d)}</b>
+          <small>≈ ${tr.time}<br>${tr.mode}</small>
+        </a>
+        <div class="actions">
+          ${x.phone ? `<a class="round green" href="${tel(x.phone)}" aria-label="${t('call')}">${icon('phone')}</a>` : ''}
+          <a class="round" href="${mapsUrl(x.lat, x.lon)}" target="_blank" rel="noopener" aria-label="${t('route')}">${icon('nav')}</a>
+        </div>
+      </div>`;
+  }
+
+  // Point de recherche : GPS du téléphone, sinon ville de référence du pays
+  // choisi (position simulée, pour la démonstration).
+  async function searchOrigin() {
+    const pos = await locate();
+    if (pos) return { lat: pos.lat, lon: pos.lon, real: true };
+    const town = (PARTNER_TOWNS[state.country] || PARTNER_TOWNS.FR)[0];
+    return { lat: town[1], lon: town[2], real: false, town: town[0] };
+  }
+
   function viewPlaces(type) {
     const cfg = PLACE_TYPES[type];
     if (!cfg) return viewNotFound();
     return `
       <h1 class="page-title">${t(cfg.title)}</h1>
-      <p class="page-sub">${t(type + 'Sub')} — classés par distance.</p>
+      <p class="page-sub">Établissements partenaires de My Med Care autour de vous, du plus proche au plus éloigné.</p>
       <div class="segmented" id="placeTabs">
         ${Object.keys(PLACE_TYPES).map((k) => `<button data-k="${k}" class="${k === type ? 'active' : ''}">${t(PLACE_TYPES[k].title)}</button>`).join('')}
+      </div>
+      <div class="radius-row">
+        <span>${icon('pin', 'class="inline-ico"')} Rayon autour de vous</span>
+        <div class="segmented mini" id="radiusSeg">${RADII.map((r) => `<button data-r="${r}" class="${state.radius === r ? 'active' : ''}">${r} km</button>`).join('')}</div>
       </div>
       <label class="search">${icon('search')}<input id="placeSearch" type="search" placeholder="${t('search')}" /></label>
       <div id="placeList"><div class="empty"><div class="spinner"></div>${t('locating')}</div></div>`;
@@ -409,30 +547,112 @@
   function bindPlaces(type) {
     const cfg = PLACE_TYPES[type];
     if (!cfg) return;
-    document.querySelectorAll('#placeTabs button').forEach((b) => b.addEventListener('click', () => { location.hash = '#/places/' + b.dataset.k; }));
-    let data = [];
-    const render = (filter = '') => {
-      const f = filter.trim().toLowerCase();
-      const items = data.items.filter((x) => !f || (x.name + ' ' + x.addr).toLowerCase().includes(f));
-      $('#placeList').innerHTML = (data.demo ? `<p class="note" style="margin:0 0 12px">${icon('info', 'class="inline-ico"')} ${t('demo')}</p>` : '') +
-        (items.length ? `<div class="list">${items.map((x) => `
-          <div class="item">
-            <div class="ico ${cfg.color}">${icon(cfg.icon)}</div>
-            <div class="body">
-              <strong>${esc(x.name)}</strong>
-              <span>${fmtDist(x.d)}${x.addr ? ' · ' + esc(x.addr) : ''}</span>
-              ${x.tag ? `<span style="margin-top:6px"><em class="badge ${/urgence|24|ouvert|garde|dispon/i.test(x.tag) ? 'open' : 'info'}" style="font-style:normal">${esc(x.tag)}</em></span>` : ''}
-            </div>
-            <div class="actions">
-              ${x.phone ? `<a class="round green" href="${tel(x.phone)}" aria-label="${t('call')}">${icon('phone')}</a>` : ''}
-              <a class="round" href="${mapsUrl(x.lat, x.lon)}" target="_blank" rel="noopener" aria-label="${t('route')}">${icon('nav')}</a>
-            </div>
-          </div>`).join('')}</div>` : `<div class="empty">${t('noResult')}</div>`);
+    let origin = null;
+    const draw = () => {
+      if (!origin) return;
+      const f = ($('#placeSearch').value || '').trim().toLowerCase();
+      const items = PARTNERS
+        .filter((x) => x.type === type)
+        .map((x) => ({ ...x, d: distanceKm(origin, x) }))
+        .filter((x) => x.d <= state.radius)
+        .filter((x) => !f || [x.name, x.town, x.specialty].join(' ').toLowerCase().includes(f))
+        .sort((a, b) => a.d - b.d);
+      const where = origin.real ? 'votre position' : `${esc(origin.town)} ${C().flag} (position simulée)`;
+      const maxR = RADII[RADII.length - 1];
+      $('#placeList').innerHTML = `
+        <p class="note place-origin">${icon('pin', 'class="inline-ico"')} ${items.length} partenaire(s) à moins de ${state.radius} km de ${where}.${origin.real ? '' : '<br>Autorisez la localisation pour chercher autour de votre position réelle.'}</p>
+        ${items.length ? `<div class="list">${items.map((x) => placeItem(x, cfg)).join('')}</div>`
+          : `<div class="empty">Aucun partenaire à moins de ${state.radius} km.${state.radius < maxR ? `<br><button class="btn ghost" id="widen" style="margin-top:12px">Élargir à ${maxR} km</button>` : ''}</div>`}`;
+      const widen = $('#widen');
+      if (widen) widen.addEventListener('click', () => setRadius(maxR));
     };
-    fetchPlaces(type).then((d) => {
-      if (currentRoute().name !== 'places') return;
-      data = d; render();
-      $('#placeSearch').addEventListener('input', (e) => render(e.target.value));
+    const setRadius = (r) => {
+      state.radius = r; store.set('radius', r);
+      document.querySelectorAll('#radiusSeg button').forEach((x) => x.classList.toggle('active', Number(x.dataset.r) === r));
+      draw();
+    };
+    document.querySelectorAll('#placeTabs button').forEach((b) => b.addEventListener('click', () => { location.hash = '#/places/' + b.dataset.k; }));
+    document.querySelectorAll('#radiusSeg button').forEach((b) => b.addEventListener('click', () => setRadius(Number(b.dataset.r))));
+    $('#placeSearch').addEventListener('input', draw);
+    searchOrigin().then((o) => {
+      if (currentRoute().name !== 'places' || currentRoute().arg !== type) return;
+      origin = o; draw();
+    });
+  }
+
+  /* --- Fiche d'un établissement partenaire --- */
+  const hashOf = (str) => [...str].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7);
+  // Informations complémentaires (en production : saisies par le partenaire dans le back-office)
+  function placeDetails(x) {
+    const h = hashOf(x.id);
+    const pick = (arr, n) => arr.filter((_, i) => ((h >> i) & 1) || i < n).slice(0, Math.max(n, 3));
+    const langs = ['Langue locale', 'Anglais', ...(h % 2 ? ['Français'] : []), ...(h % 3 === 0 ? ['Allemand'] : [])];
+    if (x.type === 'hospitals') {
+      const er = /urgence/i.test(x.tag);
+      return {
+        kind: 'Hôpital', hours: er ? [['Urgences', '24h/24 · 7j/7'], ['Consultations', 'Lun–Ven 8h–18h'], ['Visites', 'Tous les jours 13h–20h']] : [['Accueil', 'Lun–Ven 7h30–19h'], ['Consultations', 'Lun–Sam 8h–18h']],
+        services: pick(['Service d’urgences', 'Imagerie (radio, scanner, IRM)', 'Pédiatrie', 'Maternité', 'Traumatologie', 'Cardiologie', 'Laboratoire', 'Pharmacie hospitalière'], 4),
+        langs, beds: 120 + (h % 9) * 40,
+        about: `${x.name} accueille les voyageurs et prend en charge les urgences comme les consultations programmées. Un service d’accueil international aide pour les formalités et l’assurance.`,
+        extras: [['Lits', String(120 + (h % 9) * 40)], ['Accès handicapé', 'Oui'], ['Parking', h % 2 ? 'Gratuit' : 'Payant'], ['Carte européenne d’assurance maladie', 'Acceptée']],
+      };
+    }
+    if (x.type === 'pharmacies') {
+      const night = /garde/i.test(x.tag);
+      return {
+        kind: 'Pharmacie', hours: night ? [['Lun–Sam', '8h30–20h'], ['Garde de nuit', '20h–8h30 (sonnette)'], ['Dimanche', 'Selon le tour de garde']] : [['Lun–Ven', '8h30–19h30'], ['Samedi', '9h–19h'], ['Dimanche', /7j/.test(x.tag) ? '10h–18h' : 'Fermé']],
+        services: pick(['Conseil santé voyage', 'Trousse de premiers secours', 'Médicaments sans ordonnance', 'Renouvellement d’ordonnance étrangère (selon la loi)', 'Matériel orthopédique', 'Tests rapides', 'Vaccination'], 4),
+        langs, about: `Pharmacie partenaire de My Med Care. L’équipe conseille les voyageurs et aide à trouver l’équivalent local d’un médicament habituel.`,
+        extras: [['Paiement par carte', 'Oui'], ['Accès handicapé', h % 2 ? 'Oui' : 'Partiel'], ['Livraison', h % 3 ? 'Non' : 'Oui, dans la ville']],
+      };
+    }
+    return {
+      kind: x.specialty || 'Médecin', hours: [['Lun–Ven', '8h–19h'], ['Samedi', '9h–13h'], ['Dimanche', 'Fermé']],
+      services: pick(['Consultation au cabinet', 'Visite à domicile / à l’hôtel', 'Certificats médicaux', 'Vaccinations voyage', 'Petite chirurgie', 'Téléconsultation'], 4),
+      langs, about: `${x.name} reçoit les patients de passage, avec ou sans rendez-vous selon les disponibilités. Le cabinet peut délivrer une facture détaillée pour votre assurance voyage.`,
+      extras: [['Rendez-vous', /sans/i.test(x.tag) ? 'Sans rendez-vous' : 'Sur rendez-vous'], ['Délai moyen', (h % 4 + 1) + ' jour(s)'], ['Accès handicapé', h % 2 ? 'Oui' : 'Non']],
+    };
+  }
+  function viewPlace(id) {
+    const x = PARTNERS.find((p) => p.id === id);
+    if (!x) return viewNotFound();
+    const cfg = PLACE_TYPES[x.type], det = placeDetails(x), c = COUNTRIES[x.country] || C();
+    return `
+      <div class="fiche-hero ${cfg.color}">
+        <div class="ico">${icon(cfg.icon)}</div>
+        <div class="body">
+          <small>${esc(det.kind)} · Partenaire My Med Care</small>
+          <h1>${esc(x.name)}</h1>
+          <span>${esc(x.town)} ${c.flag} ${esc(c.name)}</span>
+          ${x.tag ? `<em class="badge open">${esc(x.tag)}</em>` : ''}
+        </div>
+      </div>
+      <div class="fiche-dist" id="ficheDist"><div class="spinner" style="margin:0"></div><span>Calcul de la distance…</span></div>
+      <div class="btn-row">
+        <a class="btn" href="${mapsUrl(x.lat, x.lon)}" target="_blank" rel="noopener">${icon('nav')} ${t('route')}</a>
+        <a class="btn ghost" href="#/places/${x.type}">${icon('back')} Liste</a>
+      </div>
+      <div class="section-title">Horaires</div>
+      <div class="card">${det.hours.map(([k, v]) => `<div class="kv"><span>${esc(k)}</span><b>${esc(v)}</b></div>`).join('')}</div>
+      <div class="section-title">Services</div>
+      <div class="card"><div class="tags">${det.services.map((v) => `<span class="tag">${esc(v)}</span>`).join('')}</div></div>
+      <div class="section-title">Langues parlées</div>
+      <div class="card"><div class="tags">${det.langs.map((v) => `<span class="tag teal">${esc(v)}</span>`).join('')}</div></div>
+      <div class="section-title">Présentation</div>
+      <div class="card"><p class="fiche-text">${esc(det.about)}</p>
+        ${det.extras.map(([k, v]) => `<div class="kv"><span>${esc(k)}</span><b>${esc(v)}</b></div>`).join('')}
+        <div class="kv"><span>Coordonnées GPS</span><b>${x.lat.toFixed(4)}, ${x.lon.toFixed(4)}</b></div>
+      </div>
+      <p class="note">Établissement fictif, présenté comme exemple dans ce prototype.</p>`;
+  }
+  function bindPlace(id) {
+    const x = PARTNERS.find((p) => p.id === id);
+    if (!x) return;
+    searchOrigin().then((o) => {
+      const el = $('#ficheDist');
+      if (!el || currentRoute().arg !== id) return;
+      const d = distanceKm(o, x), tr = travel(d);
+      el.innerHTML = `${icon('pin')}<div><b>${fmtDist(d)}</b> de ${o.real ? 'votre position' : esc(o.town) + ' (position simulée)'}<small>≈ ${tr.time} ${tr.mode}${tr.mode === 'à pied' ? '' : ` · ≈ ${fmtMin((d * 1.3) / 4.5 * 60)} à pied`}</small></div>`;
     });
   }
 
@@ -502,7 +722,7 @@
       <p class="page-sub">Accessible aux secours en un coup d’œil.</p>
       <section class="id-card">
         <div class="row">
-          <div><div class="muted">CARTE MÉDICALE D’URGENCE</div><h2>${esc(p.firstName)} ${esc(p.lastName)}</h2><div class="muted">Né(e) le ${p.birth ? new Date(p.birth).toLocaleDateString('fr-FR') : '—'}</div></div>
+          <div><div class="muted">CARTE MÉDICALE D’URGENCE</div><h2>${esc(p.firstName)} ${esc(p.lastName)}</h2><div class="muted">Né(e) le ${p.birth ? fmtDate(p.birth) : '—'}</div></div>
           <img src="assets/logo.svg" alt="" width="44" height="44" style="border-radius:12px" />
         </div>
         <div class="id-stats">
@@ -610,9 +830,9 @@
           <div class="body"><strong>Envoyer mes coordonnées</strong><span>SMS / message aux secours ou proches</span></div>
           <div class="round">${icon('chev')}</div>
         </button>
-        <a class="item" href="tel:112">
+        <a class="item" href="${tel(C().mountain[0])}">
           <div class="ico c-red">${icon('phone')}</div>
-          <div class="body"><strong>Secours en montagne</strong><span>112 — fonctionne sans réseau opérateur</span></div>
+          <div class="body"><strong>Secours en montagne · ${C().flag} ${C().mountain[0]}</strong><span>${esc(C().mountain[1])}</span></div>
           <div class="round green">${icon('phone')}</div>
         </a>
       </div>
@@ -665,39 +885,227 @@
   const accordion = (x) => `
     <details class="acc">
       <summary><span class="ico ${x.color}">${icon(x.icon)}</span>${esc(x.title)}<span class="chev">${icon('chev', 'width="18" height="18"')}</span></summary>
-      <ol>${x.steps.map((s) => `<li>${esc(s)}</li>`).join('')}</ol>
+      <ol>${x.steps.map((s) => `<li>${esc(urg(s))}</li>`).join('')}</ol>
     </details>`;
   const viewFirstAid = () => `
     <h1 class="page-title">${t('firstAid')}</h1>
-    <p class="page-sub">Les bons gestes, étape par étape. En cas de doute, appelez le 112.</p>
+    <p class="page-sub">Les bons gestes, étape par étape. En cas de doute, appelez le ${C().main} (${C().flag} ${C().name}).</p>
     ${FIRST_AID.map(accordion).join('')}
-    <a class="btn red block" href="tel:112" style="margin-top:16px">${icon('phone')} Appeler le 112</a>`;
+    <a class="btn red block" href="${tel(C().main)}" style="margin-top:16px">${icon('phone')} Appeler le ${C().main}</a>`;
 
   /* --- Téléconsultation --- */
+  // Médecins adhérents : chacun fixe son tarif (forfait par consultation ou tarif horaire)
   const DOCS_ONLINE = [
-    { name: 'Dr Sophie Laurent', spec: 'Médecin généraliste', wait: '5 min', langs: 'FR · EN' },
-    { name: 'Dr Antoine Moreau', spec: 'Pédiatre', wait: '12 min', langs: 'FR · ES' },
-    { name: 'Dr Elena Rossi', spec: 'Dermatologue', wait: '20 min', langs: 'FR · IT · EN' },
-    { name: 'Dr James Carter', spec: 'Médecin généraliste', wait: '8 min', langs: 'EN · DE' },
+    { id: 'd1', name: 'Dr Sophie Laurent', spec: 'Médecin généraliste', wait: '5 min', langs: 'FR · EN', priceType: 'forfait', price: 25, duration: 15, rating: 4.9, reviews: 312, years: 14, country: 'FR',
+      bio: 'Médecin généraliste à Lyon, habituée aux problèmes de santé des voyageurs : infections, traumatismes légers, renouvellement de traitement.', education: ['Doctorat en médecine — Université Lyon 1', 'DU de médecine des voyages'] },
+    { id: 'd2', name: 'Dr Antoine Moreau', spec: 'Pédiatre', wait: '12 min', langs: 'FR · ES', priceType: 'forfait', price: 35, duration: 20, rating: 4.8, reviews: 184, years: 11, country: 'BE',
+      bio: 'Pédiatre à Bruxelles. Conseils pour les enfants en vacances : fièvre, déshydratation, piqûres, mal des transports.', education: ['Docteur en médecine — ULB', 'Spécialisation en pédiatrie — HUDERF'] },
+    { id: 'd3', name: 'Dr Elena Rossi', spec: 'Dermatologue', wait: '20 min', langs: 'FR · IT · EN', priceType: 'horaire', price: 90, rating: 4.7, reviews: 97, years: 9, country: 'IT',
+      bio: 'Dermatologue à Milan. Coups de soleil, allergies cutanées, morsures et piqûres, éruptions inexpliquées en voyage.', education: ['Laurea in Medicina — Università di Milano', 'Specializzazione in Dermatologia'] },
+    { id: 'd4', name: 'Dr James Carter', spec: 'Médecin généraliste', wait: '8 min', langs: 'EN · DE', priceType: 'horaire', price: 70, rating: 4.8, reviews: 256, years: 18, country: 'GB',
+      bio: 'Médecin généraliste à Londres, ancien médecin d’expédition en montagne. Mal aigu des montagnes, blessures sportives, conseils de rapatriement.', education: ['MBBS — King’s College London', 'Diploma in Mountain Medicine'] },
+    { id: 'd5', name: 'Dr Nadia Benali', spec: 'Psychiatre', wait: '30 min', langs: 'FR · AR', priceType: 'horaire', price: 110, rating: 5.0, reviews: 63, years: 12, country: 'FR',
+      bio: 'Psychiatre à Marseille. Soutien en cas de crise d’angoisse, de choc après un accident ou de difficultés liées à l’éloignement.', education: ['Doctorat en médecine — Aix-Marseille Université', 'DES de psychiatrie'] },
   ];
-  const viewTeleconsult = () => `
-    <h1 class="page-title">${t('teleconsult')}</h1>
-    <p class="page-sub">Consultez un médecin en vidéo, 24h/24, où que vous soyez.</p>
-    <div class="list">
-      ${DOCS_ONLINE.map((d, i) => `
-        <div class="item">
-          <div class="ico c-blue">${icon('doctor')}</div>
-          <div class="body"><strong>${esc(d.name)}</strong><span>${esc(d.spec)} · ${esc(d.langs)}</span>
-            <span style="margin-top:6px"><em class="badge open" style="font-style:normal">${icon('clock', 'width="12" height="12"')} Attente ~${d.wait}</em></span></div>
-          <button class="round green" data-consult="${i}" aria-label="Démarrer">${icon('video')}</button>
-        </div>`).join('')}
-    </div>
-    <p class="note">Votre fiche médicale est transmise au médecin au début de la consultation.</p>`;
+  const fmtEUR = (n) => Number(n).toLocaleString('fr-FR', { minimumFractionDigits: n % 1 ? 2 : 0, maximumFractionDigits: 2 }) + ' €';
+  const priceMain = (d) => d.priceType === 'horaire' ? `${fmtEUR(d.price)}<small>/ heure</small>` : `${fmtEUR(d.price)}<small>forfait</small>`;
+  const priceDetail = (d) => d.priceType === 'horaire'
+    ? `Tarif horaire : ${fmtEUR(d.price)} / h, soit ${fmtEUR(Math.round(d.price / 4 * 100) / 100)} pour 15 min`
+    : `Forfait : ${fmtEUR(d.price)} la consultation${d.duration ? ` (jusqu’à ${d.duration} min)` : ''}`;
+  let teleFilter = 'all';
+  let teleSelected = null;
+  const allTeleDocs = () => [...state.teleDocs.map((d) => ({ ...d, custom: true })), ...DOCS_ONLINE];
+
+  function viewTeleconsult() {
+    const docs = allTeleDocs().filter((d) => teleFilter === 'all' || d.priceType === teleFilter);
+    return `
+      <h1 class="page-title">${t('teleconsult')}</h1>
+      <p class="page-sub">Consultez un médecin en vidéo, 24h/24. Chaque médecin adhérent affiche son tarif : forfait par consultation ou tarif horaire.</p>
+      <div class="segmented" id="teleFilter">
+        ${[['all', 'Tous'], ['forfait', 'Forfait'], ['horaire', 'Tarif horaire']].map(([k, l]) => `<button data-f="${k}" class="${teleFilter === k ? 'active' : ''}">${l}</button>`).join('')}
+      </div>
+      <div class="list">
+        ${docs.map((d) => `
+          <div class="item doc-item${teleSelected === d.id ? ' selected' : ''}">
+            <div class="ico c-blue">${icon('doctor')}</div>
+            <div class="body">
+              <a class="item-link" href="#/doctor/${esc(d.id)}"><strong>${esc(d.name)}</strong></a>
+              <span>${esc(d.spec)} · ${esc(d.langs)} · <a class="link-accent" href="#/doctor/${esc(d.id)}">Voir la fiche</a></span>
+              <span class="badges">
+                ${d.custom ? '<em class="badge warn">Nouvel adhérent</em>' : `<em class="badge info">★ ${d.rating.toFixed(1).replace('.', ',')}</em>`}
+                <em class="badge open">${icon('clock', 'width="12" height="12"')} Attente ~${esc(d.wait)}</em>
+              </span>
+            </div>
+            <button class="price" data-consult="${esc(d.id)}" aria-label="Consulter ${esc(d.name)}, ${d.priceType === 'horaire' ? 'tarif horaire' : 'forfait'} ${fmtEUR(d.price)}">
+              <b>${priceMain(d)}</b>
+              <span>${icon('video')} Consulter</span>
+            </button>
+          </div>
+          ${teleSelected === d.id ? `
+          <div class="card consult-panel">
+            <strong>Consultation vidéo avec ${esc(d.name)}</strong>
+            <div class="kv"><span>Spécialité</span><b>${esc(d.spec)}</b></div>
+            <div class="kv"><span>Tarif fixé par le médecin</span><b>${d.priceType === 'horaire' ? fmtEUR(d.price) + ' / h' : fmtEUR(d.price)}</b></div>
+            <p class="note" style="margin:6px 0 0">${priceDetail(d)}. Votre fiche médicale est transmise au médecin au début de la consultation.</p>
+            ${d.custom ? `<button type="button" class="btn ghost block danger" data-remove-doc="${esc(d.id)}" style="margin-top:12px">${icon('trash')} Retirer ce médecin</button>` : ''}
+            <div class="btn-row"><button class="btn ghost" id="consultCancel">${t('cancel')}</button><button class="btn teal" id="consultStart">${icon('video')} Démarrer</button></div>
+          </div>` : ''}`).join('') || `<div class="empty">Aucun médecin pour ce type de tarif.</div>`}
+      </div>
+
+      <div class="join-card">
+        <div class="ico c-teal">${icon('doctor')}</div>
+        <div class="body"><strong>Vous êtes médecin ?</strong><span>Rejoignez la plateforme et affichez votre tarif de téléconsultation.</span></div>
+        <a class="btn teal" href="#/join-doctor">Adhérer</a>
+      </div>`;
+  }
   function bindTeleconsult() {
+    document.querySelectorAll('#teleFilter button').forEach((b) => b.addEventListener('click', () => { teleFilter = b.dataset.f; teleSelected = null; render(); }));
     document.querySelectorAll('[data-consult]').forEach((b) => b.addEventListener('click', () => {
-      const d = DOCS_ONLINE[b.dataset.consult];
-      toast(`Connexion avec ${d.name}…`);
+      teleSelected = teleSelected === b.dataset.consult ? null : b.dataset.consult;
+      const y = $('#app').scrollTop; render(); $('#app').scrollTop = y; window.scrollTo(0, y);
     }));
+    const cancel = $('#consultCancel');
+    if (cancel) cancel.addEventListener('click', () => { teleSelected = null; const y = $('#app').scrollTop; render(); $('#app').scrollTop = y; });
+    const start = $('#consultStart');
+    if (start) start.addEventListener('click', () => {
+      const d = allTeleDocs().find((x) => x.id === teleSelected);
+      toast(`Connexion avec ${d.name}…`);
+    });
+    document.querySelectorAll('[data-remove-doc]').forEach((b) => b.addEventListener('click', () => {
+      state.teleDocs = state.teleDocs.filter((d) => d.id !== b.dataset.removeDoc);
+      store.set('teleDocs', state.teleDocs); teleSelected = null; toast('Médecin retiré'); render();
+    }));
+  }
+
+  /* --- Fiche d'un médecin de téléconsultation --- */
+  function viewDoctor(id) {
+    const d = allTeleDocs().find((x) => x.id === id);
+    if (!d) return viewNotFound();
+    const init = d.name.replace(/^Dr\.?\s*/, '').split(/\s+/).map((w) => w[0]).join('').slice(0, 2).toUpperCase();
+    const c = COUNTRIES[d.country];
+    const slots = ['Maintenant', '+30 min', '+1 h', '18:00', '19:30', 'Demain 9:00'];
+    return `
+      <div class="doc-hero">
+        <div class="doc-avatar">${esc(init)}</div>
+        <div class="body">
+          <small>${d.custom ? 'Nouvel adhérent' : 'Médecin adhérent · téléconsultation'}</small>
+          <h1>${esc(d.name)}</h1>
+          <span>${esc(d.spec)}${c ? ` · exerce en ${esc(c.name)} ${c.flag}` : ''}</span>
+          <div class="doc-stats">
+            ${d.rating ? `<span>★ ${d.rating.toFixed(1).replace('.', ',')}<small>${d.reviews || 0} avis</small></span>` : ''}
+            ${d.years ? `<span>${d.years} ans<small>d’expérience</small></span>` : ''}
+            <span>~${esc(d.wait)}<small>d’attente</small></span>
+          </div>
+        </div>
+      </div>
+
+      <div class="section-title">Tarif de la téléconsultation</div>
+      <div class="price-card">
+        <div class="amount">${d.priceType === 'horaire' ? `${fmtEUR(d.price)}<small>/ heure</small>` : `${fmtEUR(d.price)}<small>forfait</small>`}</div>
+        <div class="body">
+          <strong>${d.priceType === 'horaire' ? 'Tarif horaire' : 'Forfait par consultation'}</strong>
+          <span>${priceDetail(d)}.</span>
+          <span>Tarif fixé par le médecin.</span>
+        </div>
+      </div>
+
+      <div class="section-title">Prochaines disponibilités</div>
+      <div class="slots" id="slots">${slots.map((sl, i) => `<button class="${i === 0 ? 'active' : ''}" data-slot="${esc(sl)}">${esc(sl)}</button>`).join('')}</div>
+      <button class="btn teal block" id="docStart" style="margin-top:14px">${icon('video')} Démarrer la téléconsultation · ${d.priceType === 'horaire' ? fmtEUR(d.price) + ' / h' : fmtEUR(d.price)}</button>
+
+      <div class="section-title">Présentation</div>
+      <div class="card"><p class="fiche-text">${esc(d.bio || 'Ce médecin vient de rejoindre la plateforme : sa présentation sera bientôt disponible.')}</p></div>
+      <div class="section-title">Informations</div>
+      <div class="card">
+        <div class="kv"><span>Spécialité</span><b>${esc(d.spec)}</b></div>
+        <div class="kv"><span>Langues</span><b>${esc(d.langs)}</b></div>
+        ${(d.education || []).map((e, i) => `<div class="kv"><span>${i ? '' : 'Formation'}</span><b style="text-align:right;max-width:65%">${esc(e)}</b></div>`).join('')}
+        ${d.rpps ? `<div class="kv"><span>N° professionnel</span><b>${esc(d.rpps)}</b></div>` : ''}
+        <div class="kv"><span>Ordonnance électronique</span><b>Oui</b></div>
+        <div class="kv"><span>Facture pour l’assurance</span><b>Oui</b></div>
+      </div>
+      ${d.custom ? '' : `
+      <div class="section-title">Avis de patients</div>
+      <div class="list">
+        <div class="card review"><b>★★★★★</b><p>« Réponse rapide alors que j’étais en randonnée. Très rassurant. »</p><small>Patient vérifié · il y a 2 semaines</small></div>
+        <div class="card review"><b>★★★★★</b><p>« Explications claires et ordonnance reçue tout de suite. »</p><small>Patient vérifié · il y a 1 mois</small></div>
+      </div>`}
+      <p class="note">Médecin fictif, présenté comme exemple dans ce prototype.</p>`;
+  }
+  function bindDoctor(id) {
+    const d = allTeleDocs().find((x) => x.id === id);
+    if (!d) return;
+    let slot = 'Maintenant';
+    document.querySelectorAll('#slots button').forEach((b) => b.addEventListener('click', () => {
+      slot = b.dataset.slot;
+      document.querySelectorAll('#slots button').forEach((x) => x.classList.toggle('active', x === b));
+      $('#docStart').innerHTML = icon('video') + (slot === 'Maintenant' ? ' Démarrer la téléconsultation' : ' Réserver · ' + slot);
+    }));
+    $('#docStart').addEventListener('click', () => toast(slot === 'Maintenant' ? `Connexion avec ${d.name}…` : `Rendez-vous réservé : ${slot}`));
+  }
+
+  /* --- Adhésion d'un médecin à la téléconsultation --- */
+  function viewJoinDoctor() {
+    return `
+      <h1 class="page-title">Adhérer à la plateforme</h1>
+      <p class="page-sub">Créez votre profil de téléconsultation. Vous choisissez votre mode de tarification : un forfait par consultation ou un tarif horaire. * champ obligatoire</p>
+      <form id="joinForm" class="card" novalidate>
+        <div class="field"><label for="j-name">Nom affiché *</label><input id="j-name" name="name" placeholder="Ex. Dr Claire Dubois" autocomplete="name" />
+          <small class="field-error" id="err-j-name" hidden>Indiquez votre nom.</small></div>
+        <div class="field"><label for="j-spec">Spécialité</label>
+          <select id="j-spec" name="spec">${SPECIALTIES.map((sp) => `<option>${sp}</option>`).join('')}</select></div>
+        <div class="field"><label for="j-rpps">N° RPPS / INAMI</label><input id="j-rpps" name="rpps" inputmode="numeric" placeholder="Numéro d’identification professionnelle" /></div>
+        <div class="field"><label for="j-langs">Langues parlées</label><input id="j-langs" name="langs" value="FR" placeholder="FR, EN…" /></div>
+
+        <fieldset class="field price-mode">
+          <legend>Mode de tarification</legend>
+          <label class="radio-card"><input type="radio" name="priceType" value="forfait" checked /><span><b>Forfait</b><small>Un prix fixe par consultation</small></span></label>
+          <label class="radio-card"><input type="radio" name="priceType" value="horaire" /><span><b>Tarif horaire</b><small>Facturé selon la durée</small></span></label>
+        </fieldset>
+        <div class="two">
+          <div class="field"><label for="j-price" id="j-price-label">Prix du forfait (€) *</label><input id="j-price" name="price" type="number" min="0" step="0.5" inputmode="decimal" placeholder="25" />
+            <small class="field-error" id="err-j-price" hidden>Indiquez un montant supérieur à 0.</small></div>
+          <div class="field" id="j-dur-wrap"><label for="j-dur">Durée incluse (min)</label><input id="j-dur" name="duration" type="number" min="5" step="5" value="15" /></div>
+        </div>
+        <div class="price-preview" id="j-preview">Aperçu : <b>—</b></div>
+        <div class="field" style="margin-top:14px"><label for="j-wait">Délai de réponse habituel</label>
+          <select id="j-wait" name="wait"><option>5 min</option><option selected>10 min</option><option>15 min</option><option>30 min</option><option>1 h</option></select></div>
+        <div class="btn-row"><a class="btn ghost" href="#/teleconsult">${t('cancel')}</a><button class="btn" type="submit">${icon('check')} Publier mon profil</button></div>
+      </form>`;
+  }
+  function bindJoinDoctor() {
+    const form = $('#joinForm');
+    const mode = () => form.querySelector('input[name=priceType]:checked').value;
+    const update = () => {
+      const m = mode(), v = parseFloat($('#j-price').value);
+      $('#j-price-label').textContent = (m === 'horaire' ? 'Tarif horaire (€ / h)' : 'Prix du forfait (€)') + ' *';
+      $('#j-dur-wrap').hidden = m === 'horaire';
+      $('#j-price').placeholder = m === 'horaire' ? '70' : '25';
+      $('#j-preview').innerHTML = 'Aperçu : <b>' + (v > 0 ? priceDetail({ priceType: m, price: v, duration: parseInt($('#j-dur').value, 10) || 0 }) : '—') + '</b>';
+    };
+    form.addEventListener('input', (e) => { update(); if (e.target.classList.contains('invalid')) { e.target.classList.remove('invalid'); const er = $('#err-' + e.target.id); if (er) er.hidden = true; } });
+    form.addEventListener('change', update);
+    update();
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const fd = new FormData(form);
+      const name = String(fd.get('name') || '').trim(), price = parseFloat(fd.get('price'));
+      const nameBad = !name, priceBad = !(price > 0);
+      $('#err-j-name').hidden = !nameBad; $('#err-j-price').hidden = !priceBad;
+      $('#j-name').classList.toggle('invalid', nameBad); $('#j-price').classList.toggle('invalid', priceBad);
+      if (nameBad) return $('#j-name').focus();
+      if (priceBad) return $('#j-price').focus();
+      const doc = {
+        id: 't' + Date.now().toString(36), name, spec: fd.get('spec'),
+        langs: String(fd.get('langs') || 'FR').split(/[,·\s]+/).filter(Boolean).map((x) => x.toUpperCase()).join(' · '),
+        priceType: fd.get('priceType'), price, duration: fd.get('priceType') === 'forfait' ? parseInt(fd.get('duration'), 10) || 0 : 0,
+        wait: fd.get('wait'), rpps: String(fd.get('rpps') || '').trim(),
+      };
+      state.teleDocs.unshift(doc); store.set('teleDocs', state.teleDocs);
+      teleFilter = 'all'; teleSelected = null;
+      toast('Profil publié : ' + name);
+      location.hash = '#/teleconsult';
+    });
   }
 
   /* --- Médicaments --- */
@@ -794,6 +1202,12 @@
         <select id="setLang"><option value="fr" ${state.lang === 'fr' ? 'selected' : ''}>Français</option><option value="en" ${state.lang === 'en' ? 'selected' : ''}>English</option></select>
       </div>
     </div>
+    <div class="section-title">Pays de séjour</div>
+    <a class="item" href="#/country">
+      <span class="flag">${C().flag}</span>
+      <div class="body"><strong>${esc(C().name)}</strong><span>${state.countryAuto ? 'Détecté automatiquement' : 'Choisi manuellement'} · urgences ${esc(C().main)}</span></div>
+      <span class="round">${icon('chev')}</span>
+    </a>
     <div class="section-title">${t('appearance')}</div>
     <div class="segmented" id="themeSeg" style="margin:0">
       ${['auto', 'light', 'dark'].map((k) => `<button data-theme-opt="${k}" class="${state.theme === k ? 'active' : ''}">${t('theme' + k[0].toUpperCase() + k.slice(1))}</button>`).join('')}
@@ -814,10 +1228,64 @@
     $('#resetData').addEventListener('click', () => { $('#resetConfirm').hidden = false; });
     $('#resetNo').addEventListener('click', () => { $('#resetConfirm').hidden = true; });
     $('#resetYes').addEventListener('click', () => {
-      ['profile', 'contacts', 'meds', 'tracking', 'readNotifs'].forEach((k) => { try { localStorage.removeItem('mmc:' + k); } catch { /* */ } });
-      state.profile = { ...DEFAULT_PROFILE }; state.contacts = [...DEFAULT_CONTACTS]; state.meds = [...DEFAULT_MEDS]; state.readNotifs = false;
+      ['profile', 'contacts', 'meds', 'tracking', 'readNotifs', 'teleDocs', 'radius'].forEach((k) => { try { localStorage.removeItem('mmc:' + k); } catch { /* */ } });
+      state.profile = { ...DEFAULT_PROFILE }; state.contacts = [...DEFAULT_CONTACTS]; state.meds = [...DEFAULT_MEDS]; state.readNotifs = false; state.teleDocs = []; state.radius = 20;
       toast('Données réinitialisées'); render();
     });
+  }
+
+  /* --- Pays de séjour --- */
+  let countryQuery = '';
+  function viewCountry() {
+    const c = C();
+    const q = countryQuery.trim().toLowerCase();
+    const list = Object.entries(COUNTRIES)
+      .filter(([k, x]) => !q || x.name.toLowerCase().includes(q) || k.toLowerCase() === q)
+      .sort((a, b) => a[1].name.localeCompare(b[1].name, 'fr'));
+    return `
+      <h1 class="page-title">Pays de séjour</h1>
+      <p class="page-sub">Les numéros d’urgence et le format des dates s’adaptent au pays où vous êtes. L’application reste dans votre langue.</p>
+      <div class="country-hero">
+        <span class="flag">${c.flag}</span>
+        <div class="body"><small>${state.countryAuto ? 'Détecté automatiquement' : 'Choisi manuellement'}</small><strong>${esc(c.name)}</strong>
+          <span>SOS : ${esc(c.main)} · Date : ${fmtDate('2026-08-24')} · Indicatif ${esc(c.prefix)}</span></div>
+      </div>
+      <label class="item toggle-row" style="margin-top:12px">
+        <div class="ico c-teal">${icon('globe')}</div>
+        <div class="body"><strong>Détection automatique</strong><span>Selon le fuseau horaire du téléphone</span></div>
+        <span class="switch"><input type="checkbox" id="countryAuto" ${state.countryAuto ? 'checked' : ''}/><i></i></span>
+      </label>
+      <div class="section-title">Choisir un pays</div>
+      <label class="search">${icon('search')}<input id="countrySearch" type="search" placeholder="${t('search')}" value="${esc(countryQuery)}" /></label>
+      <div class="list" id="countryList">
+        ${list.map(([k, x]) => `
+          <button class="item country-item${k === state.country ? ' selected' : ''}" data-country="${k}">
+            <span class="flag">${x.flag}</span>
+            <div class="body"><strong>${esc(x.name)}</strong><span>Urgences ${esc(x.main)} · ${esc(x.prefix)}</span></div>
+            ${k === state.country ? `<span class="round green">${icon('check')}</span>` : ''}
+          </button>`).join('') || `<div class="empty">${t('noResult')}</div>`}
+      </div>`;
+  }
+  function bindCountry() {
+    $('#countryAuto').addEventListener('change', (e) => {
+      state.countryAuto = e.target.checked; store.set('countryAuto', state.countryAuto);
+      if (state.countryAuto) { state.country = detectCountry(); store.set('country', state.country); }
+      render();
+    });
+    const search = $('#countrySearch');
+    search.addEventListener('input', () => {
+      countryQuery = search.value;
+      const pos = search.selectionStart;
+      render();
+      const s2 = $('#countrySearch'); s2.focus(); s2.setSelectionRange(pos, pos);
+    });
+    document.querySelectorAll('[data-country]').forEach((b) => b.addEventListener('click', () => {
+      state.country = b.dataset.country; state.countryAuto = false;
+      store.set('country', state.country); store.set('countryAuto', false);
+      countryQuery = '';
+      toast(`${C().flag} ${C().name} : numéros d’urgence mis à jour`);
+      location.hash = '#/sos';
+    }));
   }
 
   const viewNotFound = () => `<div class="empty">Page introuvable. <a href="#/" class="link-accent">Retour à l’accueil</a></div>`;
@@ -834,10 +1302,14 @@
     outdoor: { view: viewOutdoor, bind: bindOutdoor, cleanup: cleanupOutdoor, tab: 'outdoor' },
     'first-aid': { view: viewFirstAid },
     teleconsult: { view: viewTeleconsult, bind: bindTeleconsult },
+    doctor: { view: viewDoctor, bind: bindDoctor },
+    place: { view: viewPlace, bind: bindPlace, tab: 'around' },
+    'join-doctor': { view: viewJoinDoctor, bind: bindJoinDoctor },
     meds: { view: viewMeds, bind: bindMeds },
     contacts: { view: viewContacts, bind: bindContacts },
     notifications: { view: viewNotifications },
     settings: { view: viewSettings, bind: bindSettings },
+    country: { view: viewCountry, bind: bindCountry },
   };
   function currentRoute() {
     const [name = '', arg] = location.hash.replace(/^#\/?/, '').split('/');
@@ -903,6 +1375,7 @@
       ${link('#/meds', 'pill', t('meds'))}
       ${link('#/contacts', 'users', t('contacts'))}
       ${link('#/first-aid', 'heart', t('firstAid'))}
+      ${link('#/country', 'globe', 'Pays de séjour : ' + C().flag + ' ' + C().name)}
       ${link('#/settings', 'settings', t('settings'))}
       <div class="foot"><img src="assets/logo.svg" alt="" />${t('tagline')}</div>`;
   }
@@ -941,6 +1414,9 @@
   /* ------------------------------------------------------------------ */
   /* Démarrage                                                           */
   /* ------------------------------------------------------------------ */
+  if (state.countryAuto || !COUNTRIES[state.country]) state.country = detectCountry();
+  // La traduction part toujours de la langue de l'utilisateur
+  trState.from = state.lang; trState.to = state.lang === 'en' ? 'es' : 'en';
   document.documentElement.lang = state.lang;
   applyTheme();
   if (darkQuery && darkQuery.addEventListener) darkQuery.addEventListener('change', applyTheme);
