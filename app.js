@@ -332,6 +332,11 @@
         <p class="page-sub">Appuyez sur le bouton : après 5 secondes, l’appel au 112 est lancé et vos proches reçoivent votre position.</p>
         <button class="sos-big" id="sosBig" aria-label="Déclencher l'alerte SOS"><div><span id="sosLabel">SOS</span><small id="sosSmall">APPUYER</small></div></button>
         <button class="btn ghost block" id="sosCancel" hidden>${t('cancel')}</button>
+        <div class="card" id="sosCall" hidden style="text-align:left">
+          <strong>Appelez maintenant le 112</strong>
+          <p class="note" style="margin:4px 0 12px">Si l\u2019appel ne s\u2019est pas lancé, composez le numéro vous-même, puis prévenez vos proches ci-dessous.</p>
+          <a class="btn red block" href="tel:112">${icon('phone')} 112</a>
+        </div>
       </div>
       <div class="section-title">Numéros d’urgence</div>
       <div class="emergency-grid">
@@ -361,13 +366,14 @@
     const reset = () => { clearInterval(sosTimer); sosTimer = null; big.classList.remove('counting'); label.textContent = 'SOS'; small.textContent = 'APPUYER'; cancel.hidden = true; };
     big.addEventListener('click', () => {
       if (sosTimer) return;
+      $('#sosCall').hidden = true;
       let n = 5; big.classList.add('counting'); label.textContent = n; small.textContent = 'APPEL DANS'; cancel.hidden = false;
       if (navigator.vibrate) navigator.vibrate(200);
       sosTimer = setInterval(() => {
         n -= 1;
         if (n > 0) { label.textContent = n; if (navigator.vibrate) navigator.vibrate(120); return; }
         reset();
-        toast('Alerte envoyée à vos proches');
+        $('#sosCall').hidden = false;
         window.location.href = 'tel:112';
       }, 1000);
     });
@@ -404,7 +410,7 @@
     const render = (filter = '') => {
       const f = filter.trim().toLowerCase();
       const items = data.items.filter((x) => !f || (x.name + ' ' + x.addr).toLowerCase().includes(f));
-      $('#placeList').innerHTML = (data.demo ? `<p class="note" style="margin:0 0 12px">${icon('info', 'style="display:inline;width:14px;height:14px;vertical-align:-2px"')} ${t('demo')}</p>` : '') +
+      $('#placeList').innerHTML = (data.demo ? `<p class="note" style="margin:0 0 12px">${icon('info', 'class="inline-ico"')} ${t('demo')}</p>` : '') +
         (items.length ? `<div class="list">${items.map((x) => `
           <div class="item">
             <div class="ico ${cfg.color}">${icon(cfg.icon)}</div>
@@ -507,14 +513,14 @@
       <div class="section-title">Antécédents & traitements</div>
       <div class="card">
         <div class="tags" style="margin-bottom:10px">${conditions.map((a) => `<span class="tag">${esc(a)}</span>`).join('') || '<span class="note" style="margin:0">Aucun antécédent</span>'}</div>
-        <div class="tags">${meds.map((a) => `<span class="tag" style="background:var(--teal-100);color:#1F8C91">💊 ${esc(a)}</span>`).join('') || ''}</div>
+        <div class="tags">${meds.map((a) => `<span class="tag teal">${esc(a)}</span>`).join('') || ''}</div>
       </div>
       <div class="section-title">Informations</div>
       <div class="card">
         <div class="kv"><span>Taille</span><b>${esc(p.height || '—')} cm</b></div>
         <div class="kv"><span>Poids</span><b>${esc(p.weight || '—')} kg</b></div>
         <div class="kv"><span>Médecin traitant</span><b>${esc(p.doctor || '—')}</b></div>
-        <div class="kv"><span>Tél. médecin</span><b>${p.doctorPhone ? `<a href="${tel(p.doctorPhone)}" style="color:var(--blue-500)">${esc(p.doctorPhone)}</a>` : '—'}</b></div>
+        <div class="kv"><span>Tél. médecin</span><b>${p.doctorPhone ? `<a href="${tel(p.doctorPhone)}" class="link-accent">${esc(p.doctorPhone)}</a>` : '—'}</b></div>
         <div class="kv"><span>Assurance</span><b style="text-align:right;max-width:60%">${esc(p.insurance || '—')}</b></div>
         ${p.notes ? `<div class="kv"><span>Notes</span><b style="text-align:right;max-width:60%">${esc(p.notes)}</b></div>` : ''}
       </div>
@@ -735,7 +741,7 @@
       <div class="list">
         ${state.contacts.map((c, i) => `
           <div class="item">
-            <div class="avatar" style="width:44px;height:44px;border-radius:14px;background:var(--teal-100);color:#1F8C91;border:0;font-size:15px">${esc((c.name[0] || '?').toUpperCase())}</div>
+            <div class="avatar" style="width:44px;height:44px;border-radius:14px;background:var(--teal-100);color:var(--teal-ink);border:0;font-size:15px">${esc((c.name[0] || '?').toUpperCase())}</div>
             <div class="body"><strong>${esc(c.name)}</strong><span>${esc(c.relation)} · ${esc(c.phone)}</span></div>
             <div class="actions">
               <a class="round green" href="${tel(c.phone)}" aria-label="${t('call')}">${icon('phone')}</a>
@@ -789,18 +795,23 @@
       <img src="assets/logo.svg" alt="" width="56" height="56" style="border-radius:16px" />
       <div><strong>My Med Care</strong><div class="note" style="margin:2px 0 0">${t('tagline')}.<br>Version 2.0</div></div>
     </div>
-    <button class="btn ghost block" id="resetData" style="margin-top:16px">${icon('trash')} Réinitialiser mes données</button>`;
+    <button class="btn ghost block" id="resetData" style="margin-top:16px">${icon('trash')} Réinitialiser mes données</button>
+    <div class="card" id="resetConfirm" style="margin-top:10px" hidden>
+      <strong>Effacer votre fiche, vos proches et vos rappels ?</strong>
+      <div class="confirm-row"><button class="btn ghost" id="resetNo">${t('cancel')}</button><button class="btn red" id="resetYes">Effacer</button></div>
+    </div>`;
   function bindSettings() {
     $('#setLang').addEventListener('change', (e) => setLang(e.target.value));
-    $('#resetData').addEventListener('click', () => {
-      if (!confirm('Effacer votre fiche, vos proches et vos rappels ?')) return;
+    $('#resetData').addEventListener('click', () => { $('#resetConfirm').hidden = false; });
+    $('#resetNo').addEventListener('click', () => { $('#resetConfirm').hidden = true; });
+    $('#resetYes').addEventListener('click', () => {
       ['profile', 'contacts', 'meds', 'tracking', 'readNotifs'].forEach((k) => { try { localStorage.removeItem('mmc:' + k); } catch { /* */ } });
       state.profile = { ...DEFAULT_PROFILE }; state.contacts = [...DEFAULT_CONTACTS]; state.meds = [...DEFAULT_MEDS]; state.readNotifs = false;
       toast('Données réinitialisées'); render();
     });
   }
 
-  const viewNotFound = () => `<div class="empty">Page introuvable. <a href="#/" style="color:var(--blue-500)">Retour à l’accueil</a></div>`;
+  const viewNotFound = () => `<div class="empty">Page introuvable. <a href="#/" class="link-accent">Retour à l’accueil</a></div>`;
 
   /* ------------------------------------------------------------------ */
   /* Routeur                                                             */

@@ -1,5 +1,5 @@
 /* Service worker : rend l'application disponible hors ligne */
-const CACHE = 'mymedcare-v2';
+const CACHE = 'mymedcare-v3';
 const ASSETS = ['./', 'index.html', 'styles.css', 'app.js', 'assets/logo.svg', 'manifest.webmanifest'];
 
 self.addEventListener('install', (e) => {
