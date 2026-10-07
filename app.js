@@ -88,6 +88,7 @@
     meds: store.get('meds', DEFAULT_MEDS),
     readNotifs: store.get('readNotifs', false),
     theme: store.get('theme', 'auto'),
+    homeLayout: store.get('homeLayout', window.MMC_DEFAULT_HOME || 'classic'),
     position: null,
     radius: store.get('radius', 20),
     teleDocs: store.get('teleDocs', []),
@@ -377,7 +378,62 @@
       <div class="arrow">${icon('arrow')}</div>
     </a>`;
 
-  function viewHome() {
+  // Accueil simplifié : le bouton SOS au centre, les fonctions principales autour
+  const ORBIT = [
+    { href: '#/translate', ic: 'translate', color: 'o-blue', key: 'translation' },
+    { href: '#/places/hospitals', ic: 'hospital', color: 'o-red', key: 'hospitals' },
+    { href: '#/places/pharmacies', ic: 'pharmacy', color: 'o-green', key: 'pharmacies' },
+    { href: '#/places/doctors', ic: 'doctor', color: 'o-teal', key: 'doctors' },
+    { href: '#/outdoor', ic: 'mountain', color: 'o-moss', key: 'outdoor' },
+    { href: '#/profile', ic: 'id', color: 'o-violet', key: 'file' },
+  ];
+  function viewHomeRadial() {
+    const p = state.profile;
+    const n = ORBIT.length;
+    // Positions sur un cercle (en % du carré), en partant d'en haut à gauche
+    const pos = ORBIT.map((_, i) => {
+      const a = (-120 + i * (360 / n)) * Math.PI / 180;
+      return { x: 50 + 37 * Math.cos(a), y: 50 + 37 * Math.sin(a) };
+    });
+    return `
+      <section class="r-home">
+        <div class="r-greet">
+          <small>${t('hello')}</small>
+          <h1>${esc(p.firstName)} ${esc(p.lastName)}</h1>
+          <a class="r-country" href="#/country">${C().flag} ${esc(C().name)} · urgences ${esc(C().main)}</a>
+        </div>
+        <div class="orbit">
+          <svg class="orbit-lines" viewBox="0 0 100 100" aria-hidden="true">
+            <circle cx="50" cy="50" r="37" />
+            ${pos.map((q) => `<line x1="50" y1="50" x2="${q.x.toFixed(2)}" y2="${q.y.toFixed(2)}" />`).join('')}
+          </svg>
+          ${ORBIT.map((o, i) => `
+            <a class="sat" href="${o.href}" style="left:${pos[i].x.toFixed(2)}%;top:${pos[i].y.toFixed(2)}%">
+              <span class="sat-ico ${o.color}">${icon(o.ic)}</span>
+              <span class="sat-label">${t(o.key)}</span>
+            </a>`).join('')}
+          <a class="r-sos" href="#/sos" aria-label="SOS urgence"><span>SOS</span><small>${t('sosUrgence')}</small></a>
+        </div>
+        <div class="r-more">
+          <a href="#/teleconsult">${icon('video')}${t('teleconsult')}</a>
+          <a href="#/first-aid">${icon('heart')}${t('firstAid')}</a>
+        </div>
+        <svg class="r-mountains" viewBox="0 0 400 120" preserveAspectRatio="none" aria-hidden="true">
+          <path d="M0 120 L0 78 L60 40 L105 70 L170 18 L235 72 L280 46 L340 84 L400 56 L400 120 Z" />
+          <path d="M0 120 L0 96 L80 64 L150 92 L220 58 L300 94 L360 74 L400 88 L400 120 Z" />
+        </svg>
+      </section>
+      <div class="tagline">
+        ${icon('shield')}<span>${t('tagline')}</span>
+        <select id="langSelect" aria-label="${t('language')}">
+          <option value="fr" ${state.lang === 'fr' ? 'selected' : ''}>FR</option>
+          <option value="en" ${state.lang === 'en' ? 'selected' : ''}>EN</option>
+        </select>
+      </div>`;
+  }
+  const viewHome = () => (state.homeLayout === 'radial' ? viewHomeRadial() : viewHomeClassic());
+
+  function viewHomeClassic() {
     const p = state.profile;
     return `
       <section class="hero">
@@ -1208,6 +1264,10 @@
       <div class="body"><strong>${esc(C().name)}</strong><span>${state.countryAuto ? 'Détecté automatiquement' : 'Choisi manuellement'} · urgences ${esc(C().main)}</span></div>
       <span class="round">${icon('chev')}</span>
     </a>
+    <div class="section-title">Écran d\u2019accueil</div>
+    <div class="segmented" id="homeSeg" style="margin:0">
+      ${[['radial', 'Simplifié'], ['classic', 'Détaillé']].map(([k, l]) => `<button data-home="${k}" class="${state.homeLayout === k ? 'active' : ''}">${l}</button>`).join('')}
+    </div>
     <div class="section-title">${t('appearance')}</div>
     <div class="segmented" id="themeSeg" style="margin:0">
       ${['auto', 'light', 'dark'].map((k) => `<button data-theme-opt="${k}" class="${state.theme === k ? 'active' : ''}">${t('theme' + k[0].toUpperCase() + k.slice(1))}</button>`).join('')}
@@ -1225,6 +1285,11 @@
   function bindSettings() {
     $('#setLang').addEventListener('change', (e) => setLang(e.target.value));
     document.querySelectorAll('[data-theme-opt]').forEach((b) => b.addEventListener('click', () => setTheme(b.dataset.themeOpt)));
+    document.querySelectorAll('[data-home]').forEach((b) => b.addEventListener('click', () => {
+      state.homeLayout = b.dataset.home; store.set('homeLayout', state.homeLayout);
+      document.querySelectorAll('[data-home]').forEach((x) => x.classList.toggle('active', x === b));
+      toast(state.homeLayout === 'radial' ? 'Accueil simplifié' : 'Accueil détaillé');
+    }));
     $('#resetData').addEventListener('click', () => { $('#resetConfirm').hidden = false; });
     $('#resetNo').addEventListener('click', () => { $('#resetConfirm').hidden = true; });
     $('#resetYes').addEventListener('click', () => {
@@ -1349,6 +1414,10 @@
       { k: 'file', href: '#/profile', ic: 'id', label: t('file') },
       { k: 'outdoor', href: '#/outdoor', ic: 'mountain', label: t('outdoor') },
     ];
+    // Accueil simplifié : le SOS est déjà au centre, la barre du bas est masquée
+    const radialHome = state.homeLayout === 'radial' && currentRoute().name === '';
+    $('#tabbar').hidden = radialHome;
+    $('#view').classList.toggle('no-tabbar', radialHome);
     $('#tabbar').innerHTML = tabs.map((x) => x.k === 'sos'
       ? `<a class="sos-tab${activeTab === 'sos' ? ' active' : ''}" href="${x.href}" aria-label="SOS"><span class="sos-dot">SOS</span></a>`
       : `<a class="${activeTab === x.k ? 'active' : ''}" href="${x.href}">${icon(x.ic)}<span>${x.label}</span></a>`).join('');

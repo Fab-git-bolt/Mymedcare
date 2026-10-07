@@ -5,6 +5,8 @@ import sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT = sys.argv[1] if len(sys.argv) > 1 else os.path.join(ROOT, 'preview.html')
+# 2e argument optionnel : 'radial' pour ouvrir sur l'accueil simplifié
+HOME = sys.argv[2] if len(sys.argv) > 2 else ''
 
 logo = 'data:image/svg+xml;base64,' + base64.b64encode(open(os.path.join(ROOT, 'assets/logo.svg'), 'rb').read()).decode()
 css = open(os.path.join(ROOT, 'styles.css')).read()
@@ -165,6 +167,8 @@ frame_js = """
 })();
 """
 
+home_js = f"window.MMC_DEFAULT_HOME = '{HOME}';\n" if HOME else ''
+
 out = f"""<title>My Med Care</title>
 <meta name="theme-color" content="#2A6AA2">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -176,7 +180,7 @@ out = f"""<title>My Med Care</title>
 </style>
 {stage}
 <script>
-{js}
+{home_js}{js}
 {frame_js}
 </script>
 """

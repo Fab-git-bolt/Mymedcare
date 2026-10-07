@@ -26,3 +26,5 @@ Les données personnelles restent sur l'appareil (localStorage).
 ## Démo client (cadre de téléphone)
 
 `python3 tools/build_preview.py` génère `preview.html` : un fichier unique, autonome, qui présente l'application dans un cadre de smartphone sur ordinateur (et en plein écran sur mobile).
+
+Pour la variante d'accueil simplifié (SOS au centre, fonctions autour) : `python3 tools/build_preview.py preview.html radial`. Le choix est aussi disponible dans Réglages → Écran d'accueil.
