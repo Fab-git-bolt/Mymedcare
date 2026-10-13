@@ -186,7 +186,8 @@
   // (partenariats) : l'utilisateur ne les ajoute pas. L'application affiche ceux
   // situés dans un rayon de 20 ou 50 km autour de la position du téléphone,
   // quel que soit le pays. Pour ce prototype, l'annuaire est généré à partir de
-  // villes réelles avec des établissements fictifs (en production : back-office).
+  // villes réelles avec des établissements fictifs (en production : back-office,
+  // qui ne stocke que la liste des partenaires et leur identifiant Google).
   const PLACE_TYPES = {
     hospitals: { title: 'hospitals', icon: 'hospital', color: 'c-blue' },
     pharmacies: { title: 'pharmacies', icon: 'pharmacy', color: 'c-green' },
@@ -561,7 +562,7 @@
     : { mode: 'en voiture', time: fmtMin((km * 1.3) / 50 * 60 + 3) });
 
   function placeItem(x, cfg) {
-    const tr = travel(x.d);
+    const tr = travel(x.d), g = placeInfo(x);
     const badges = [
       x.specialty ? `<em class="badge info">${esc(x.specialty)}</em>` : '',
       x.tag ? `<em class="badge ${/urgence|24|ouvert|garde|sans/i.test(x.tag) ? 'open' : 'info'}">${esc(x.tag)}</em>` : '',
@@ -572,6 +573,7 @@
         <a class="body item-link" href="#/place/${esc(x.id)}">
           <strong>${esc(x.name)}</strong>
           <span>${esc(x.town)} ${COUNTRIES[x.country] ? COUNTRIES[x.country].flag : ''} · <u>Voir la fiche</u></span>
+          ${g.rating ? `<span class="g-mini"><b>${g.rating.toFixed(1).replace('.', ',')} ★</b> (${g.ratingCount}) · <i class="${g.openNow ? 'is-open' : 'is-closed'}">${g.openNow ? 'Ouvert' : 'Fermé'}</i></span>` : ''}
           ${badges ? `<span class="badges">${badges}</span>` : ''}
         </a>
         <a class="dist" href="#/place/${esc(x.id)}" aria-label="À ${fmtDist(x.d)} de vous, environ ${tr.time} ${tr.mode}">
@@ -579,7 +581,6 @@
           <small>≈ ${tr.time}<br>${tr.mode}</small>
         </a>
         <div class="actions">
-          ${x.phone ? `<a class="round green" href="${tel(x.phone)}" aria-label="${t('call')}">${icon('phone')}</a>` : ''}
           <a class="round" href="${mapsUrl(x.lat, x.lon)}" target="_blank" rel="noopener" aria-label="${t('route')}">${icon('nav')}</a>
         </div>
       </div>`;
@@ -647,78 +648,127 @@
   }
 
   /* --- Fiche d'un établissement partenaire --- */
-  const hashOf = (str) => [...str].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7);
-  // Informations complémentaires (en production : saisies par le partenaire dans le back-office)
-  function placeDetails(x) {
-    const h = hashOf(x.id);
-    const pick = (arr, n) => arr.filter((_, i) => ((h >> i) & 1) || i < n).slice(0, Math.max(n, 3));
-    const langs = ['Langue locale', 'Anglais', ...(h % 2 ? ['Français'] : []), ...(h % 3 === 0 ? ['Allemand'] : [])];
-    if (x.type === 'hospitals') {
-      const er = /urgence/i.test(x.tag);
-      return {
-        kind: 'Hôpital', hours: er ? [['Urgences', '24h/24 · 7j/7'], ['Consultations', 'Lun–Ven 8h–18h'], ['Visites', 'Tous les jours 13h–20h']] : [['Accueil', 'Lun–Ven 7h30–19h'], ['Consultations', 'Lun–Sam 8h–18h']],
-        services: pick(['Service d’urgences', 'Imagerie (radio, scanner, IRM)', 'Pédiatrie', 'Maternité', 'Traumatologie', 'Cardiologie', 'Laboratoire', 'Pharmacie hospitalière'], 4),
-        langs, beds: 120 + (h % 9) * 40,
-        about: `${x.name} accueille les voyageurs et prend en charge les urgences comme les consultations programmées. Un service d’accueil international aide pour les formalités et l’assurance.`,
-        extras: [['Lits', String(120 + (h % 9) * 40)], ['Accès handicapé', 'Oui'], ['Parking', h % 2 ? 'Gratuit' : 'Payant'], ['Carte européenne d’assurance maladie', 'Acceptée']],
-      };
-    }
-    if (x.type === 'pharmacies') {
-      const night = /garde/i.test(x.tag);
-      return {
-        kind: 'Pharmacie', hours: night ? [['Lun–Sam', '8h30–20h'], ['Garde de nuit', '20h–8h30 (sonnette)'], ['Dimanche', 'Selon le tour de garde']] : [['Lun–Ven', '8h30–19h30'], ['Samedi', '9h–19h'], ['Dimanche', /7j/.test(x.tag) ? '10h–18h' : 'Fermé']],
-        services: pick(['Conseil santé voyage', 'Trousse de premiers secours', 'Médicaments sans ordonnance', 'Renouvellement d’ordonnance étrangère (selon la loi)', 'Matériel orthopédique', 'Tests rapides', 'Vaccination'], 4),
-        langs, about: `Pharmacie partenaire de My Med Care. L’équipe conseille les voyageurs et aide à trouver l’équivalent local d’un médicament habituel.`,
-        extras: [['Paiement par carte', 'Oui'], ['Accès handicapé', h % 2 ? 'Oui' : 'Partiel'], ['Livraison', h % 3 ? 'Non' : 'Oui, dans la ville']],
-      };
-    }
-    if (x.type === 'vets') {
-      const er = /urgence/i.test(x.tag);
-      return {
-        kind: x.specialty || 'Vétérinaire', hours: er ? [['Consultations', 'Lun–Sam 8h–20h'], ['Urgences', '24h/24 · 7j/7']] : [['Lun–Ven', '8h30–19h'], ['Samedi', '9h–12h30'], ['Dimanche', 'Fermé']],
-        services: pick(['Consultation', 'Urgences animales', 'Vaccination & passeport européen', 'Certificat de voyage', 'Chirurgie', 'Radiographie', 'Identification (puce)', 'Nouveaux animaux de compagnie'], 4),
-        langs, about: `${x.name} soigne les animaux des voyageurs : blessure en promenade, piqûre, intoxication, ou formalités sanitaires pour poursuivre le voyage.`,
-        extras: [['Rendez-vous', er ? 'Avec ou sans' : 'Sur rendez-vous'], ['Animaux', /NAC/.test(x.tag) ? 'Chiens, chats, NAC' : 'Chiens & chats'], ['Paiement par carte', 'Oui']],
-      };
-    }
+  // Les informations des fiches proviennent de Google (Places API) : rien n'est
+  // demandé aux établissements. My Med Care ne conserve que l'identifiant Google
+  // (place_id) de chaque partenaire ; un serveur interroge Places API (la clé
+  // d'API ne doit pas être dans l'application) et renvoie la réponse brute,
+  // convertie ici par fromGooglePlace(). Les conditions de Google imposent
+  // d'afficher la source et de ne pas stocker ces données au-delà de 30 jours.
+  // Champs demandés (FieldMask) :
+  const GOOGLE_FIELDS = 'id,displayName,primaryTypeDisplayName,formattedAddress,location,nationalPhoneNumber,internationalPhoneNumber,websiteUri,googleMapsUri,rating,userRatingCount,regularOpeningHours,currentOpeningHours,editorialSummary,accessibilityOptions,paymentOptions,parkingOptions,businessStatus';
+  function fromGooglePlace(g) {
+    const hours = g.currentOpeningHours || g.regularOpeningHours || {};
     return {
-      kind: x.specialty || 'Médecin', hours: [['Lun–Ven', '8h–19h'], ['Samedi', '9h–13h'], ['Dimanche', 'Fermé']],
-      services: pick(['Consultation au cabinet', 'Visite à domicile / à l’hôtel', 'Certificats médicaux', 'Vaccinations voyage', 'Petite chirurgie', 'Téléconsultation'], 4),
-      langs, about: `${x.name} reçoit les patients de passage, avec ou sans rendez-vous selon les disponibilités. Le cabinet peut délivrer une facture détaillée pour votre assurance voyage.`,
-      extras: [['Rendez-vous', /sans/i.test(x.tag) ? 'Sans rendez-vous' : 'Sur rendez-vous'], ['Délai moyen', (h % 4 + 1) + ' jour(s)'], ['Accès handicapé', h % 2 ? 'Oui' : 'Non']],
+      kind: g.primaryTypeDisplayName?.text || '',
+      name: g.displayName?.text || '',
+      address: g.formattedAddress || '',
+      phone: g.internationalPhoneNumber || g.nationalPhoneNumber || '',
+      website: g.websiteUri || '',
+      mapsUri: g.googleMapsUri || '',
+      rating: g.rating, ratingCount: g.userRatingCount || 0,
+      openNow: hours.openNow, weekdays: hours.weekdayDescriptions || [],
+      summary: g.editorialSummary?.text || '',
+      closed: g.businessStatus && g.businessStatus !== 'OPERATIONAL',
+      extras: [
+        g.accessibilityOptions && ['Entrée accessible en fauteuil', g.accessibilityOptions.wheelchairAccessibleEntrance ? 'Oui' : 'Non'],
+        g.paymentOptions && ['Paiement par carte', g.paymentOptions.acceptsCreditCards ? 'Oui' : 'Non'],
+        g.parkingOptions && ['Parking', g.parkingOptions.freeParkingLot ? 'Gratuit' : g.parkingOptions.paidParkingLot ? 'Payant' : 'Non précisé'],
+      ].filter(Boolean),
     };
   }
+
+  // Prototype : réponse Google simulée, au même format que Places API
+  const hashOf = (str) => [...str].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7);
+  const DAYS = ['lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi', 'dimanche'];
+  const hm = (m) => `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
+  // Horaires : 7 entrées (lundi → dimanche), [ouverture, fermeture] en minutes, 'h24' ou null (fermé)
+  function demoHours(x) {
+    const week = (wk, sat, sun) => [wk, wk, wk, wk, wk, sat, sun];
+    if (/24h/i.test(x.tag)) return week('h24', 'h24', 'h24');
+    if (x.type === 'hospitals') return week([480, 1140], [480, 780], null);
+    if (x.type === 'pharmacies') return /7j/.test(x.tag) ? week([510, 1200], [540, 1200], [600, 1080]) : week([510, 1170], [540, 1140], null);
+    if (x.type === 'vets') return week([510, 1140], [540, 750], null);
+    return week([480, 1140], [540, 780], null);
+  }
+  function demoGooglePlace(x) {
+    const h = hashOf(x.id), c = COUNTRIES[x.country] || C(), hours = demoHours(x);
+    const now = new Date(), day = (now.getDay() + 6) % 7, min = now.getHours() * 60 + now.getMinutes();
+    const today = hours[day];
+    const digits = String(h).padStart(10, '0').slice(-8);
+    const kinds = { hospitals: 'Hôpital', pharmacies: 'Pharmacie', doctors: x.specialty || 'Médecin', vets: x.specialty || 'Vétérinaire' };
+    const summaries = {
+      hospitals: 'Établissement hospitalier avec service d’urgences et consultations.',
+      pharmacies: 'Pharmacie de quartier proposant médicaments et conseils.',
+      doctors: 'Cabinet médical recevant sur rendez-vous ou sans rendez-vous.',
+      vets: 'Soins vétérinaires pour animaux de compagnie.',
+    };
+    return {
+      id: 'demo-' + x.id,
+      displayName: { text: x.name },
+      primaryTypeDisplayName: { text: kinds[x.type] },
+      formattedAddress: `${1 + (h % 120)} ${['rue de la République', 'avenue de la Gare', 'boulevard Central', 'place du Marché'][h % 4]}, ${x.town}, ${c.name}`,
+      location: { latitude: x.lat, longitude: x.lon },
+      internationalPhoneNumber: `${c.prefix} ${digits.replace(/(\d{2})(?=\d)/g, '$1 ')}`,
+      websiteUri: h % 3 ? `https://www.example.com/${x.id.toLowerCase()}` : undefined,
+      googleMapsUri: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(x.name + ' ' + x.town)}`,
+      rating: Math.round((3.6 + (h % 14) / 10) * 10) / 10,
+      userRatingCount: 12 + (h % 480),
+      regularOpeningHours: {
+        openNow: today === 'h24' || (!!today && min >= today[0] && min < today[1]),
+        weekdayDescriptions: hours.map((v, i) => `${DAYS[i]}: ${v === 'h24' ? 'Ouvert 24h/24' : v ? `${hm(v[0])} – ${hm(v[1])}` : 'Fermé'}`),
+      },
+      editorialSummary: { text: summaries[x.type] },
+      accessibilityOptions: { wheelchairAccessibleEntrance: h % 4 !== 0 },
+      paymentOptions: { acceptsCreditCards: true },
+      parkingOptions: x.type === 'hospitals' ? { freeParkingLot: !!(h % 2), paidParkingLot: !(h % 2) } : undefined,
+      businessStatus: 'OPERATIONAL',
+    };
+  }
+  // En production : fetch(`/api/places/${x.googlePlaceId}`) côté serveur → fromGooglePlace(json)
+  const googleCache = {};
+  const placeInfo = (x) => (googleCache[x.id] ||= fromGooglePlace(demoGooglePlace(x)));
+  const stars = (r) => '★★★★★'.slice(0, Math.round(r)) + '☆☆☆☆☆'.slice(0, 5 - Math.round(r));
+
   function viewPlace(id) {
     const x = PARTNERS.find((p) => p.id === id);
     if (!x) return viewNotFound();
-    const cfg = PLACE_TYPES[x.type], det = placeDetails(x), c = COUNTRIES[x.country] || C();
+    const cfg = PLACE_TYPES[x.type], g = placeInfo(x), c = COUNTRIES[x.country] || C();
+    const todayIdx = (new Date().getDay() + 6) % 7;
     return `
       <div class="fiche-hero ${cfg.color}">
         <div class="ico">${icon(cfg.icon)}</div>
         <div class="body">
-          <small>${esc(det.kind)} · Partenaire My Med Care</small>
-          <h1>${esc(x.name)}</h1>
+          <small>${esc(g.kind)} · Partenaire My Med Care</small>
+          <h1>${esc(g.name || x.name)}</h1>
           <span>${esc(x.town)} ${c.flag} ${esc(c.name)}</span>
-          ${x.tag ? `<em class="badge open">${esc(x.tag)}</em>` : ''}
+          ${g.rating ? `<span class="g-rating"><b>${g.rating.toFixed(1).replace('.', ',')}</b> <i>${stars(g.rating)}</i> (${g.ratingCount} avis Google)</span>` : ''}
+          ${g.closed ? '<em class="badge warn">Fermé définitivement</em>'
+            : g.openNow === undefined ? '' : `<em class="badge ${g.openNow ? 'open' : 'warn'}">${g.openNow ? 'Ouvert maintenant' : 'Fermé actuellement'}</em>`}
         </div>
       </div>
       <div class="fiche-dist" id="ficheDist"><div class="spinner" style="margin:0"></div><span>Calcul de la distance…</span></div>
       <div class="btn-row">
-        <a class="btn" href="${mapsUrl(x.lat, x.lon)}" target="_blank" rel="noopener">${icon('nav')} ${t('route')}</a>
-        <a class="btn ghost" href="#/places/${x.type}">${icon('back')} Liste</a>
+        ${g.phone ? `<a class="btn" href="${tel(g.phone)}">${icon('phone')} ${t('call')}</a>` : ''}
+        <a class="btn ${g.phone ? 'ghost' : ''}" href="${mapsUrl(x.lat, x.lon)}" target="_blank" rel="noopener">${icon('nav')} ${t('route')}</a>
       </div>
-      <div class="section-title">Horaires</div>
-      <div class="card">${det.hours.map(([k, v]) => `<div class="kv"><span>${esc(k)}</span><b>${esc(v)}</b></div>`).join('')}</div>
-      <div class="section-title">Services</div>
-      <div class="card"><div class="tags">${det.services.map((v) => `<span class="tag">${esc(v)}</span>`).join('')}</div></div>
-      <div class="section-title">Langues parlées</div>
-      <div class="card"><div class="tags">${det.langs.map((v) => `<span class="tag teal">${esc(v)}</span>`).join('')}</div></div>
-      <div class="section-title">Présentation</div>
-      <div class="card"><p class="fiche-text">${esc(det.about)}</p>
-        ${det.extras.map(([k, v]) => `<div class="kv"><span>${esc(k)}</span><b>${esc(v)}</b></div>`).join('')}
+      <div class="section-title">Coordonnées</div>
+      <div class="card">
+        ${g.address ? `<div class="kv"><span>Adresse</span><b>${esc(g.address)}</b></div>` : ''}
+        ${g.phone ? `<div class="kv"><span>Téléphone</span><b><a class="link-accent" href="${tel(g.phone)}">${esc(g.phone)}</a></b></div>` : ''}
+        ${g.website ? `<div class="kv"><span>Site web</span><b><a class="link-accent" href="${esc(g.website)}" target="_blank" rel="noopener">Ouvrir le site</a></b></div>` : ''}
         <div class="kv"><span>Coordonnées GPS</span><b>${x.lat.toFixed(4)}, ${x.lon.toFixed(4)}</b></div>
       </div>
-      <p class="note">Établissement fictif, présenté comme exemple dans ce prototype.</p>`;
+      ${g.weekdays.length ? `<div class="section-title">Horaires</div>
+      <div class="card">${g.weekdays.map((d, i) => {
+        const [k, ...v] = d.split(': ');
+        return `<div class="kv${i === todayIdx ? ' today' : ''}"><span>${esc(k[0].toUpperCase() + k.slice(1))}</span><b>${esc(v.join(': '))}</b></div>`;
+      }).join('')}</div>` : ''}
+      ${g.summary || g.extras.length ? `<div class="section-title">À savoir</div>
+      <div class="card">${g.summary ? `<p class="fiche-text">${esc(g.summary)}</p>` : ''}
+        ${g.extras.map(([k, v]) => `<div class="kv"><span>${esc(k)}</span><b>${esc(v)}</b></div>`).join('')}
+      </div>` : ''}
+      <p class="g-source">Informations : Google${g.mapsUri ? ` · <a class="link-accent" href="${esc(g.mapsUri)}" target="_blank" rel="noopener">Voir sur Google Maps</a>` : ''}</p>
+      <p class="note">Prototype : établissement fictif, données Google simulées.</p>`;
   }
   function bindPlace(id) {
     const x = PARTNERS.find((p) => p.id === id);

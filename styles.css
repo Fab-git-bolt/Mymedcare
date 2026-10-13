@@ -607,3 +607,15 @@ a.dist { color: inherit; }
 .r-mountains path:first-child { fill: var(--mount-a); }
 .r-mountains path:last-child { fill: var(--mount-b); }
 @media (max-width: 360px) { .sat { width: 72px; } .sat-ico { width: 56px; height: 56px; border-radius: 18px; } .sat-label { font-size: 9.5px; } }
+
+/* Fiches établissements : données Google */
+.g-rating { display: block; margin-top: 4px; font-size: 13px; color: var(--ink-700); }
+.g-rating b { color: var(--ink-900); }
+.g-rating i, .g-mini b { font-style: normal; color: var(--amber-500); letter-spacing: 1px; }
+.g-mini { display: block; margin-top: 2px; font-size: 12.5px; color: var(--ink-500); }
+.g-mini i { font-style: normal; font-weight: 700; }
+.g-mini .is-open { color: var(--green-ink); }
+.g-mini .is-closed { color: var(--red-ink); }
+.kv.today span, .kv.today b { color: var(--ink-900); font-weight: 800; }
+.kv b { text-align: right; }
+.g-source { margin: 14px 2px 4px; font-size: 12.5px; color: var(--ink-500); }
