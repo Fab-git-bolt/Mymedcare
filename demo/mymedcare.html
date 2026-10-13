@@ -625,6 +625,12 @@ a.dist { color: inherit; }
 .kv.today span, .kv.today b { color: var(--ink-900); font-weight: 800; }
 .kv b { text-align: right; }
 .g-source { margin: 14px 2px 4px; font-size: 12.5px; color: var(--ink-500); }
+.g-review { display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center; }
+.g-review .fiche-text { margin: 0; }
+.g-review-stars { font-size: 26px; letter-spacing: 4px; color: var(--amber-500); }
+.g-review .btn { width: 100%; }
+.g-review-all { font-size: 13.5px; font-weight: 700; }
+.g-review small { font-size: 12px; color: var(--ink-500); }
 
 
 /* ================= Présentation : cadre de téléphone ================= */
@@ -1429,8 +1435,10 @@ window.MMC_DEFAULT_HOME = 'radial';
   // d'API ne doit pas être dans l'application) et renvoie la réponse brute,
   // convertie ici par fromGooglePlace(). Les conditions de Google imposent
   // d'afficher la source et de ne pas stocker ces données au-delà de 30 jours.
+  // Google ne permet pas de publier un avis par API : l'application ouvre la
+  // page « Écrire un avis » de Google, où le client le rédige avec son compte.
   // Champs demandés (FieldMask) :
-  const GOOGLE_FIELDS = 'id,displayName,primaryTypeDisplayName,formattedAddress,location,nationalPhoneNumber,internationalPhoneNumber,websiteUri,googleMapsUri,rating,userRatingCount,regularOpeningHours,currentOpeningHours,editorialSummary,accessibilityOptions,paymentOptions,parkingOptions,businessStatus';
+  const GOOGLE_FIELDS = 'id,displayName,primaryTypeDisplayName,formattedAddress,location,nationalPhoneNumber,internationalPhoneNumber,websiteUri,googleMapsUri,googleMapsLinks,rating,userRatingCount,regularOpeningHours,currentOpeningHours,editorialSummary,accessibilityOptions,paymentOptions,parkingOptions,businessStatus';
   function fromGooglePlace(g) {
     const hours = g.currentOpeningHours || g.regularOpeningHours || {};
     return {
@@ -1440,6 +1448,8 @@ window.MMC_DEFAULT_HOME = 'radial';
       phone: g.internationalPhoneNumber || g.nationalPhoneNumber || '',
       website: g.websiteUri || '',
       mapsUri: g.googleMapsUri || '',
+      reviewUri: g.googleMapsLinks?.writeAReviewUri || (g.id ? `https://search.google.com/local/writereview?placeid=${encodeURIComponent(g.id)}` : ''),
+      reviewsUri: g.googleMapsLinks?.reviewsUri || g.googleMapsUri || '',
       rating: g.rating, ratingCount: g.userRatingCount || 0,
       openNow: hours.openNow, weekdays: hours.weekdayDescriptions || [],
       summary: g.editorialSummary?.text || '',
@@ -1486,6 +1496,8 @@ window.MMC_DEFAULT_HOME = 'radial';
       internationalPhoneNumber: `${c.prefix} ${digits.replace(/(\d{2})(?=\d)/g, '$1 ')}`,
       websiteUri: h % 3 ? `https://www.example.com/${x.id.toLowerCase()}` : undefined,
       googleMapsUri: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(x.name + ' ' + x.town)}`,
+      // Établissement fictif : pas de vraie page d'avis, on ouvre la recherche Google Maps
+      googleMapsLinks: { writeAReviewUri: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(x.name + ' ' + x.town)}` },
       rating: Math.round((3.6 + (h % 14) / 10) * 10) / 10,
       userRatingCount: 12 + (h % 480),
       regularOpeningHours: {
@@ -1541,6 +1553,14 @@ window.MMC_DEFAULT_HOME = 'radial';
       ${g.summary || g.extras.length ? `<div class="section-title">À savoir</div>
       <div class="card">${g.summary ? `<p class="fiche-text">${esc(g.summary)}</p>` : ''}
         ${g.extras.map(([k, v]) => `<div class="kv"><span>${esc(k)}</span><b>${esc(v)}</b></div>`).join('')}
+      </div>` : ''}
+      ${g.reviewUri ? `<div class="section-title">Votre avis</div>
+      <div class="card g-review">
+        <div class="g-review-stars" aria-hidden="true">★★★★★</div>
+        <p class="fiche-text">Vous êtes passé par cet établissement ? Votre avis Google aide les autres voyageurs à choisir où se faire soigner.</p>
+        <a class="btn block" href="${esc(g.reviewUri)}" target="_blank" rel="noopener">${icon('edit')} Laisser un avis sur Google</a>
+        ${g.reviewsUri ? `<a class="g-review-all link-accent" href="${esc(g.reviewsUri)}" target="_blank" rel="noopener">Lire les ${g.ratingCount || ''} avis</a>` : ''}
+        <small>L’avis est publié par Google avec votre compte Google.</small>
       </div>` : ''}
       <p class="g-source">Informations : Google${g.mapsUri ? ` · <a class="link-accent" href="${esc(g.mapsUri)}" target="_blank" rel="noopener">Voir sur Google Maps</a>` : ''}</p>
       <p class="note">Prototype : établissement fictif, données Google simulées.</p>`;
