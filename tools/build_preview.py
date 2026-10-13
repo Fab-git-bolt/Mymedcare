@@ -175,7 +175,9 @@ frame_js = """
 
 home_js = f"window.MMC_DEFAULT_HOME = '{HOME}';\n" if HOME else ''
 
-out = f"""<title>My Med Care</title>
+out = f"""<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>My Med Care</title>
 <meta name="theme-color" content="#2A6AA2">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
