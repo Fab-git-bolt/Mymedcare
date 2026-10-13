@@ -47,7 +47,7 @@ frame_css = r"""
 } }
 :root[data-theme="dark"] { --stage-a: #08111A; --stage-b: #0D2128; --stage-ink: #E8EFF6; --stage-muted: #8FA0B3; --body-edge: #56636F; }
 
-.stage-copy, .statusbar, .home-ind, .island { display: none; }
+.statusbar, .home-ind, .island { display: none; }
 .device, .screen { display: contents; }
 .topbar { top: env(safe-area-inset-top, 0px); padding-top: 12px; }
 
@@ -62,14 +62,6 @@ frame_css = r"""
     height: 100%; display: flex; align-items: center; justify-content: center; gap: 72px;
     padding-inline: 32px;
   }
-  .stage-copy { display: block; max-width: 340px; color: var(--stage-ink); }
-  .stage-copy img { width: 64px; height: 64px; border-radius: 18px; box-shadow: 0 12px 30px rgba(42, 106, 162, .3); }
-  .stage-copy h1 { font-size: 40px; line-height: 1.05; letter-spacing: -.03em; margin: 22px 0 12px; text-wrap: balance; }
-  .stage-copy h1 b { color: var(--teal-500); }
-  .stage-copy p { color: var(--stage-muted); font-size: 16px; line-height: 1.55; margin: 0 0 22px; }
-  .stage-copy ul { list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; font-size: 14px; font-weight: 600; }
-  .stage-copy li { display: flex; align-items: center; gap: 10px; }
-  .stage-copy li::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--teal-500); flex: none; }
 
   .device {
     display: block; position: relative; flex: none;
@@ -124,7 +116,6 @@ frame_css = r"""
   .screen .drawer { top: 46px; border-top-left-radius: 24px; }
   .screen .toast { bottom: 112px; }
 }
-@media (min-width: 640px) and (max-width: 979px) { .stage-copy { display: none !important; } }
 """
 
 status_icons = (
@@ -134,18 +125,6 @@ status_icons = (
 )
 
 stage = f"""<div class="stage">
-  <section class="stage-copy" aria-label="Présentation">
-    <img src="{logo}" alt="Logo My Med Care">
-    <h1>My Med <b>Care</b></h1>
-    <p>Prototype interactif de l’application mobile. Toutes les fonctionnalités sont cliquables : essayez-les directement sur le téléphone.</p>
-    <ul>
-      <li>SOS urgence et numéros utiles</li>
-      <li>Traduction médicale en 6 langues</li>
-      <li>Hôpitaux, pharmacies et médecins</li>
-      <li>Fiche médicale d’urgence</li>
-      <li>Outdoor, premiers secours et rappels</li>
-    </ul>
-  </section>
   <div class="device" id="device">
     <div class="screen">
       <div class="statusbar" aria-hidden="true"><span id="clock">9:41</span><span class="sys">{status_icons}</span></div>
