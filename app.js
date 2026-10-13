@@ -89,7 +89,7 @@
     meds: store.get('meds', DEFAULT_MEDS),
     readNotifs: store.get('readNotifs', false),
     theme: store.get('theme', 'auto'),
-    homeLayout: store.get('homeLayout', window.MMC_DEFAULT_HOME || 'classic'),
+    homeLayout: store.get('homeLayout', window.MMC_DEFAULT_HOME || 'radial'),
     position: null,
     radius: store.get('radius', 20),
     teleDocs: store.get('teleDocs', []),
