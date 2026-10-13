@@ -625,3 +625,61 @@ a.dist { color: inherit; }
 .g-review .btn { width: 100%; }
 .g-review-all { font-size: 13.5px; font-weight: 700; }
 .g-review small { font-size: 12px; color: var(--ink-500); }
+
+/* Option payante : Famille */
+.fam-hero { display: flex; align-items: center; gap: 14px; margin: 4px 0 8px; }
+.fam-hero .ico { width: 52px; height: 52px; border-radius: 17px; display: grid; place-items: center; flex: none; background: var(--violet-100); color: var(--violet-ink); }
+.fam-hero .ico svg { width: 26px; height: 26px; }
+.fam-hero small { display: block; font-size: 12px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--violet-ink); }
+.fam-hero h1 { margin: 2px 0 0; font-size: 24px; line-height: 1.15; }
+.fam-perks { display: flex; flex-direction: column; gap: 14px; margin-bottom: 16px; }
+.perk { display: flex; gap: 12px; align-items: flex-start; }
+.perk .ico { width: 40px; height: 40px; border-radius: 13px; display: grid; place-items: center; flex: none; }
+.perk .ico svg { width: 20px; height: 20px; }
+.perk strong { display: block; font-size: 14.5px; }
+.perk span { display: block; margin-top: 2px; font-size: 13px; line-height: 1.45; color: var(--ink-500); }
+.fam-map { width: 100%; max-width: 360px; display: block; margin: 8px auto 0; border-radius: var(--radius-md); background: var(--surface); box-shadow: var(--shadow-sm); }
+.fam-map .g { stroke: var(--line); stroke-width: 1; }
+.fam-map .zone { fill: var(--teal-100); fill-opacity: .55; stroke: var(--teal-500); stroke-width: 1.5; stroke-dasharray: 4 4; }
+.fam-map .zl { font-size: 8.5px; font-weight: 700; fill: var(--teal-ink); }
+.fam-map .home { fill: var(--blue-600); }
+.fam-map .pin circle { stroke: var(--surface); stroke-width: 2.5; }
+.fam-map .pin.in circle { fill: var(--teal-500); }
+.fam-map .pin.out circle { fill: var(--red-500); }
+.fam-map .pin text { fill: #fff; font-size: 11px; font-weight: 800; }
+.fam-item .body { min-width: 0; }
+.fam-av { width: 44px; height: 44px; border-radius: 14px; background: var(--violet-100); color: var(--violet-ink); border: 0; font-size: 15px; flex: none; }
+.fam-live { display: flex; align-items: center; gap: 6px; margin-top: 6px; font-size: 12.5px; color: var(--ink-500); }
+.fam-live i { width: 8px; height: 8px; border-radius: 50%; background: var(--green-500); animation: famPulse 1.6s ease-out infinite; }
+@keyframes famPulse { 0% { box-shadow: 0 0 0 0 rgba(39, 168, 107, .5); } 100% { box-shadow: 0 0 0 8px rgba(39, 168, 107, 0); } }
+@media (prefers-reduced-motion: reduce) { .fam-live i { animation: none; } }
+.fam-switch { display: flex; align-items: center; gap: 8px; margin-top: 8px; font-size: 13px; color: var(--ink-700); }
+.fam-switch input { width: 18px; height: 18px; accent-color: var(--teal-500); }
+.fam-code { display: block; margin-top: 4px; font-size: 13px; color: var(--ink-700); }
+.fam-code b { letter-spacing: .12em; font-variant-numeric: tabular-nums; }
+.fam-btns { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.fam-btns .btn { padding: 8px 12px; font-size: 13px; }
+.fam-alert .ico { background: var(--green-100); color: var(--green-ink); }
+.fam-alert.warn .ico { background: var(--amber-100); color: var(--amber-ink); }
+.fam-alert.sos .ico { background: var(--red-100); color: var(--red-600); }
+.fam-alert.sos strong { color: var(--red-ink); }
+.fam-demo summary { cursor: pointer; font-weight: 700; }
+.fam-banner { display: flex; align-items: center; gap: 12px; padding: 14px 16px; margin: 4px 0 14px; border-radius: var(--radius-md); background: var(--green-100); color: var(--green-ink); }
+.fam-banner strong { display: block; }
+.fam-banner span { font-size: 13px; }
+.fam-banner .dot { width: 12px; height: 12px; border-radius: 50%; background: var(--green-500); flex: none; animation: famPulse 1.6s ease-out infinite; }
+.fam-sos { margin-top: 14px; }
+.fam-sos .ico { width: 44px; height: 44px; border-radius: 14px; display: grid; place-items: center; flex: none; }
+.fam-sent { margin: 12px 0 0; color: var(--green-ink); }
+.fam-sent svg { width: 16px; height: 16px; vertical-align: -3px; }
+.fam-sms { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.fam-sms .btn { padding: 8px 12px; font-size: 13px; }
+.fam-item { flex-wrap: wrap; align-items: flex-start; }
+.fam-item .body { flex: 1 1 0; }
+.fam-item .body strong, .fam-item .body span { white-space: normal; overflow: visible; text-overflow: clip; }
+.fam-item .body span.badges { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.fam-item .actions { flex: 1 0 100%; justify-content: flex-end; padding-top: 10px; border-top: 1px solid var(--line); }
+.fam-switch { white-space: nowrap; }
+.fam-item .body span.fam-live { display: flex; align-items: center; gap: 6px; }
+.fam-live i { display: block; flex: none; }
+.fam-banner + .card, .fam-banner ~ .btn { margin-bottom: 12px; }

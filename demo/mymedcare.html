@@ -632,6 +632,64 @@ a.dist { color: inherit; }
 .g-review-all { font-size: 13.5px; font-weight: 700; }
 .g-review small { font-size: 12px; color: var(--ink-500); }
 
+/* Option payante : Famille */
+.fam-hero { display: flex; align-items: center; gap: 14px; margin: 4px 0 8px; }
+.fam-hero .ico { width: 52px; height: 52px; border-radius: 17px; display: grid; place-items: center; flex: none; background: var(--violet-100); color: var(--violet-ink); }
+.fam-hero .ico svg { width: 26px; height: 26px; }
+.fam-hero small { display: block; font-size: 12px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--violet-ink); }
+.fam-hero h1 { margin: 2px 0 0; font-size: 24px; line-height: 1.15; }
+.fam-perks { display: flex; flex-direction: column; gap: 14px; margin-bottom: 16px; }
+.perk { display: flex; gap: 12px; align-items: flex-start; }
+.perk .ico { width: 40px; height: 40px; border-radius: 13px; display: grid; place-items: center; flex: none; }
+.perk .ico svg { width: 20px; height: 20px; }
+.perk strong { display: block; font-size: 14.5px; }
+.perk span { display: block; margin-top: 2px; font-size: 13px; line-height: 1.45; color: var(--ink-500); }
+.fam-map { width: 100%; max-width: 360px; display: block; margin: 8px auto 0; border-radius: var(--radius-md); background: var(--surface); box-shadow: var(--shadow-sm); }
+.fam-map .g { stroke: var(--line); stroke-width: 1; }
+.fam-map .zone { fill: var(--teal-100); fill-opacity: .55; stroke: var(--teal-500); stroke-width: 1.5; stroke-dasharray: 4 4; }
+.fam-map .zl { font-size: 8.5px; font-weight: 700; fill: var(--teal-ink); }
+.fam-map .home { fill: var(--blue-600); }
+.fam-map .pin circle { stroke: var(--surface); stroke-width: 2.5; }
+.fam-map .pin.in circle { fill: var(--teal-500); }
+.fam-map .pin.out circle { fill: var(--red-500); }
+.fam-map .pin text { fill: #fff; font-size: 11px; font-weight: 800; }
+.fam-item .body { min-width: 0; }
+.fam-av { width: 44px; height: 44px; border-radius: 14px; background: var(--violet-100); color: var(--violet-ink); border: 0; font-size: 15px; flex: none; }
+.fam-live { display: flex; align-items: center; gap: 6px; margin-top: 6px; font-size: 12.5px; color: var(--ink-500); }
+.fam-live i { width: 8px; height: 8px; border-radius: 50%; background: var(--green-500); animation: famPulse 1.6s ease-out infinite; }
+@keyframes famPulse { 0% { box-shadow: 0 0 0 0 rgba(39, 168, 107, .5); } 100% { box-shadow: 0 0 0 8px rgba(39, 168, 107, 0); } }
+@media (prefers-reduced-motion: reduce) { .fam-live i { animation: none; } }
+.fam-switch { display: flex; align-items: center; gap: 8px; margin-top: 8px; font-size: 13px; color: var(--ink-700); }
+.fam-switch input { width: 18px; height: 18px; accent-color: var(--teal-500); }
+.fam-code { display: block; margin-top: 4px; font-size: 13px; color: var(--ink-700); }
+.fam-code b { letter-spacing: .12em; font-variant-numeric: tabular-nums; }
+.fam-btns { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.fam-btns .btn { padding: 8px 12px; font-size: 13px; }
+.fam-alert .ico { background: var(--green-100); color: var(--green-ink); }
+.fam-alert.warn .ico { background: var(--amber-100); color: var(--amber-ink); }
+.fam-alert.sos .ico { background: var(--red-100); color: var(--red-600); }
+.fam-alert.sos strong { color: var(--red-ink); }
+.fam-demo summary { cursor: pointer; font-weight: 700; }
+.fam-banner { display: flex; align-items: center; gap: 12px; padding: 14px 16px; margin: 4px 0 14px; border-radius: var(--radius-md); background: var(--green-100); color: var(--green-ink); }
+.fam-banner strong { display: block; }
+.fam-banner span { font-size: 13px; }
+.fam-banner .dot { width: 12px; height: 12px; border-radius: 50%; background: var(--green-500); flex: none; animation: famPulse 1.6s ease-out infinite; }
+.fam-sos { margin-top: 14px; }
+.fam-sos .ico { width: 44px; height: 44px; border-radius: 14px; display: grid; place-items: center; flex: none; }
+.fam-sent { margin: 12px 0 0; color: var(--green-ink); }
+.fam-sent svg { width: 16px; height: 16px; vertical-align: -3px; }
+.fam-sms { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.fam-sms .btn { padding: 8px 12px; font-size: 13px; }
+.fam-item { flex-wrap: wrap; align-items: flex-start; }
+.fam-item .body { flex: 1 1 0; }
+.fam-item .body strong, .fam-item .body span { white-space: normal; overflow: visible; text-overflow: clip; }
+.fam-item .body span.badges { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.fam-item .actions { flex: 1 0 100%; justify-content: flex-end; padding-top: 10px; border-top: 1px solid var(--line); }
+.fam-switch { white-space: nowrap; }
+.fam-item .body span.fam-live { display: flex; align-items: center; gap: 6px; }
+.fam-live i { display: block; flex: none; }
+.fam-banner + .card, .fam-banner ~ .btn { margin-bottom: 12px; }
+
 
 /* ================= Présentation : cadre de téléphone ================= */
 :root {
@@ -877,6 +935,7 @@ window.MMC_DEFAULT_HOME = 'radial';
     countryAuto: store.get('countryAuto', true),
     country: store.get('country', null),
     tracking: store.get('tracking', false),
+    family: { plan: null, role: 'parent', zone: { name: 'Maison', radius: 300 }, members: [], alerts: [], ...store.get('family', {}) },
   };
 
   /* ------------------------------------------------------------------ */
@@ -886,7 +945,7 @@ window.MMC_DEFAULT_HOME = 'radial';
     fr: {
       hello: 'Bonjour', home: 'Accueil', around: 'Autour', sos: 'SOS', file: 'Ma fiche', outdoor: 'Outdoor',
       sosUrgence: 'URGENCE', sosTitle: 'Besoin d’aide ?', sosDesc: 'Appuyez pour alerter les secours et vos proches avec votre position.',
-      services: 'Services', translation: 'Traduction', hospitals: 'Hôpitaux', pharmacies: 'Pharmacies', doctors: 'Médecins', vets: 'Vétérinaires',
+      services: 'Services', translation: 'Traduction', hospitals: 'Hôpitaux', pharmacies: 'Pharmacies', doctors: 'Médecins', vets: 'Vétérinaires', family: 'Famille', familySub: 'Suivi & alertes · Premium',
       translationSub: 'Phrases médicales', hospitalsSub: 'Urgences proches', pharmaciesSub: 'Ouvertes près de vous', doctorsSub: 'Généralistes & spécialistes', vetsSub: 'Soins pour vos animaux',
       fileSub: 'Dossier médical', outdoorSub: 'Montagne & aventure', teleconsult: 'Téléconsultation', teleconsultSub: 'Un médecin en vidéo',
       meds: 'Médicaments', medsSub: 'Rappels de prise', contacts: 'Proches', contactsSub: 'Contacts d’urgence', firstAid: 'Premiers secours', firstAidSub: 'Gestes qui sauvent',
@@ -900,7 +959,7 @@ window.MMC_DEFAULT_HOME = 'radial';
     en: {
       hello: 'Hello', home: 'Home', around: 'Nearby', sos: 'SOS', file: 'My file', outdoor: 'Outdoor',
       sosUrgence: 'EMERGENCY', sosTitle: 'Need help?', sosDesc: 'Tap to alert emergency services and your contacts with your location.',
-      services: 'Services', translation: 'Translation', hospitals: 'Hospitals', pharmacies: 'Pharmacies', doctors: 'Doctors', vets: 'Vets',
+      services: 'Services', translation: 'Translation', hospitals: 'Hospitals', pharmacies: 'Pharmacies', doctors: 'Doctors', vets: 'Vets', family: 'Family', familySub: 'Tracking & alerts · Premium',
       translationSub: 'Medical phrases', hospitalsSub: 'Nearby ER', pharmaciesSub: 'Open near you', doctorsSub: 'GPs & specialists', vetsSub: 'Care for your pets',
       fileSub: 'Medical record', outdoorSub: 'Mountain & adventure', teleconsult: 'Teleconsultation', teleconsultSub: 'See a doctor by video',
       meds: 'Medication', medsSub: 'Intake reminders', contacts: 'Contacts', contactsSub: 'Emergency contacts', firstAid: 'First aid', firstAidSub: 'Life-saving actions',
@@ -1208,6 +1267,7 @@ window.MMC_DEFAULT_HOME = 'radial';
         <div class="r-more">
           <a href="#/teleconsult">${icon('video')}${t('teleconsult')}</a>
           <a href="#/first-aid">${icon('heart')}${t('firstAid')}</a>
+          <a href="#/family">${icon('shield')}${t('family')}</a>
         </div>
         <svg class="r-mountains" viewBox="0 0 400 120" preserveAspectRatio="none" aria-hidden="true">
           <path d="M0 120 L0 78 L60 40 L105 70 L170 18 L235 72 L280 46 L340 84 L400 56 L400 120 Z" />
@@ -1257,6 +1317,7 @@ window.MMC_DEFAULT_HOME = 'radial';
         ${tile('#/teleconsult', 'video', 'c-blue', t('teleconsult'), t('teleconsultSub'))}
         ${tile('#/meds', 'pill', 'c-amber', t('meds'), t('medsSub'))}
         ${tile('#/contacts', 'users', 'c-teal', t('contacts'), t('contactsSub'))}
+        ${tile('#/family', 'shield', 'c-violet', t('family'), t('familySub'))}
         ${tile('#/first-aid', 'heart', 'c-red', t('firstAid'), t('firstAidSub'))}
       </div>
 
@@ -1286,6 +1347,7 @@ window.MMC_DEFAULT_HOME = 'radial';
           <strong>Appelez maintenant le ${C().main}</strong>
           <p class="note" style="margin:4px 0 12px">Si l\u2019appel ne s\u2019est pas lancé, composez le numéro vous-même, puis prévenez vos proches ci-dessous.</p>
           <a class="btn red block" href="${tel(C().main)}">${icon('phone')} ${C().main}</a>
+          <p class="note fam-sent" id="sosFamily" hidden></p>
         </div>
       </div>
       <div class="section-title">Numéros d’urgence · ${C().flag} ${esc(C().name)} <a href="#/country">Changer</a></div>
@@ -1304,6 +1366,9 @@ window.MMC_DEFAULT_HOME = 'radial';
             </div>
           </div>`).join('')}
       </div>
+      ${famActive()
+        ? `<a class="item fam-sos" href="#/family"><div class="ico c-violet">${icon('shield')}</div><div class="body"><strong>SOS automatique · Famille</strong><span>${familySosRecipients().map((m) => esc(m.name)).join(', ') || 'Aucun membre désigné'}</span></div><span class="round">${icon('chev')}</span></a>`
+        : `<a class="item fam-sos" href="#/family"><div class="ico c-violet">${icon('shield')}</div><div class="body"><strong>Prévenir ma famille automatiquement</strong><span>Option Famille : le SOS part aux membres désignés</span></div><span class="round">${icon('chev')}</span></a>`}
       <button class="btn teal block" id="sharePos" style="margin-top:14px">${icon('share')} Partager ma position</button>`;
   }
   function bindSos() {
@@ -1319,6 +1384,7 @@ window.MMC_DEFAULT_HOME = 'radial';
         if (n > 0) { label.textContent = n; if (navigator.vibrate) navigator.vibrate(120); return; }
         reset();
         $('#sosCall').hidden = false;
+        notifyFamilySos();
         window.location.href = tel(C().main);
       }, 1000);
     });
@@ -2100,6 +2166,284 @@ window.MMC_DEFAULT_HOME = 'radial';
     });
   }
 
+  /* --- Option payante : Famille (position en direct, alertes, SOS aux proches) --- */
+  // Prototype : le paiement, les comptes et les positions des enfants sont simulés
+  // dans l'appareil. En production : comptes parent/enfant, serveur de positions
+  // chiffrées, notifications push + SMS, et paiement par Stripe (web/PWA) ou par
+  // achat intégré Apple/Google (stores). Le SOS lui-même (appel au 112) reste gratuit.
+  const FAMILY_PLAN = { name: 'My Med Care Famille', max: 5, prices: { month: 4.99, year: 39.99 } };
+  const ZONE_RADII = [[200, '200 m'], [300, '300 m'], [500, '500 m'], [1000, '1 km']];
+  const fam = () => state.family;
+  const famActive = () => !!state.family.plan;
+  const saveFamily = () => store.set('family', state.family);
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+  // Module de paiement (point d'entrée unique, à brancher sur le prestataire)
+  const payments = {
+    async checkout(planId) { await sleep(1400); return { id: planId, since: new Date().toISOString() }; },
+  };
+  const ago = (ts) => {
+    const s = Math.round((Date.now() - ts) / 1000);
+    return s < 10 ? 'à l’instant' : s < 60 ? `il y a ${s} s` : s < 3600 ? `il y a ${Math.round(s / 60)} min` : `il y a ${Math.round(s / 3600)} h`;
+  };
+  const planLabel = (id) => (id === 'year' ? `${fmtEUR(FAMILY_PLAN.prices.year)} / an` : `${fmtEUR(FAMILY_PLAN.prices.month)} / mois`);
+  function addAlert(type, text, member) {
+    fam().alerts.unshift({ id: Date.now() + Math.random(), ts: Date.now(), type, text, member: member || null });
+    fam().alerts = fam().alerts.slice(0, 20); saveFamily();
+  }
+  const seedFamily = () => {
+    if (fam().members.length) return;
+    const base = { status: 'active', sos: true, inside: true, updated: Date.now(), demo: true };
+    fam().members = [
+      { ...base, id: 'm1', name: 'Léa', relation: 'Fille, 12 ans', kind: 'child', phone: '+33 6 11 22 33 44', dx: 70, dy: -50, battery: 76 },
+      { ...base, id: 'm2', name: 'Hugo', relation: 'Fils, 9 ans', kind: 'child', phone: '+33 6 55 66 77 88', dx: -110, dy: 90, battery: 24 },
+      { ...base, id: 'm3', name: 'Julie Martin', relation: 'Conjointe', kind: 'adult', phone: '+33 6 12 34 56 78', dx: 0, dy: 0, battery: 100 },
+    ];
+    saveFamily();
+  };
+  // Destinataires du message SOS : les membres désignés (ou les responsables, sur l'appareil d'un enfant)
+  function familySosRecipients() {
+    if (!famActive()) return [];
+    const f = fam();
+    if (f.role === 'child') return [{ name: `${state.profile.firstName} ${state.profile.lastName}`, phone: '', owner: true }, ...f.members.filter((m) => m.kind === 'adult' && m.status === 'active')];
+    return f.members.filter((m) => m.sos !== false);
+  }
+  async function notifyFamilySos() {
+    const el = $('#sosFamily'); if (!el) return;
+    const rec = familySosRecipients(); if (!rec.length) return;
+    const pos = await locate(), p = state.profile;
+    const link = pos ? ` Position : https://maps.google.com/?q=${pos.lat.toFixed(5)},${pos.lon.toFixed(5)}` : '';
+    const text = `🚨 SOS de ${p.firstName} ${p.lastName} : besoin d'aide.${link}`;
+    addAlert('sos-sent', `SOS envoyé à ${rec.map((m) => m.name).join(', ')}`);
+    el.hidden = false;
+    el.innerHTML = `${icon('check')} <b>Message SOS envoyé</b> à ${rec.map((m) => esc(m.name)).join(', ')}, avec votre position.
+      <span class="fam-sms">${rec.filter((m) => m.phone).map((m) => `<a class="btn ghost" href="sms:${esc(m.phone.replace(/[^\d+]/g, ''))}?&body=${encodeURIComponent(text)}">${icon('message')} SMS à ${esc(m.name)}</a>`).join('')}</span>`;
+  }
+
+  // Simulation des positions (en production : positions reçues du serveur)
+  function famTick() {
+    const f = fam(), r = f.zone.radius;
+    f.members.filter((m) => m.status === 'active' && m.kind === 'child').forEach((m) => {
+      m.dx += (Math.random() - .5) * 50; m.dy += (Math.random() - .5) * 50;
+      if (m.away) m.dx = Math.max(m.dx, r + 100);
+      else { const d = Math.hypot(m.dx, m.dy), cap = r * .7; if (d > cap) { m.dx *= cap / d; m.dy *= cap / d; } }
+      m.updated = Date.now();
+      if (Math.random() < .08) m.battery = Math.max(1, m.battery - 1);
+      const inside = Math.hypot(m.dx, m.dy) <= r;
+      if (m.inside !== undefined && inside !== m.inside) {
+        const msg = `${m.name} ${inside ? 'est de retour dans' : 'a quitté'} la zone « ${f.zone.name} »`;
+        addAlert(inside ? 'zone-in' : 'zone-out', msg, m.id); toast(msg);
+      }
+      m.inside = inside;
+      if (m.battery <= 20 && !m.lowAlert) { m.lowAlert = true; addAlert('battery', `Batterie faible : ${m.name} (${m.battery} %)`, m.id); toast(`Batterie faible : ${m.name}`); }
+    });
+    saveFamily();
+  }
+  let famTimer = null, famOrigin = null;
+  const cleanupFamily = () => { clearInterval(famTimer); famTimer = null; };
+  const famLatLon = (m) => {
+    const o = famOrigin || { lat: PARTNER_TOWNS.FR[0][1], lon: PARTNER_TOWNS.FR[0][2] };
+    return { lat: o.lat + m.dy / -111320, lon: o.lon + m.dx / (111320 * Math.cos(o.lat * Math.PI / 180)) };
+  };
+
+  function famMap() {
+    const f = fam(), kids = f.members.filter((m) => m.status === 'active' && m.kind === 'child');
+    const far = Math.max(f.zone.radius * 1.4, ...kids.map((m) => Math.hypot(m.dx, m.dy) * 1.15));
+    const k = 100 / far, c = (v) => Math.min(226, Math.max(14, 120 + v * k));
+    return `
+      <svg class="fam-map" viewBox="0 0 240 240" role="img" aria-label="Carte schématique des positions">
+        ${[40, 80, 120, 160, 200].map((v) => `<line class="g" x1="${v}" y1="0" x2="${v}" y2="240" /><line class="g" x1="0" y1="${v}" x2="240" y2="${v}" />`).join('')}
+        <circle class="zone" cx="120" cy="120" r="${(f.zone.radius * k).toFixed(1)}" />
+        <text class="zl" x="120" y="${(120 - f.zone.radius * k - 5).toFixed(1)}" text-anchor="middle">${esc(f.zone.name)} · ${f.zone.radius >= 1000 ? f.zone.radius / 1000 + ' km' : f.zone.radius + ' m'}</text>
+        <circle class="home" cx="120" cy="120" r="5" />
+        ${kids.map((m) => `<g class="pin ${m.inside ? 'in' : 'out'}"><circle cx="${c(m.dx).toFixed(1)}" cy="${c(m.dy).toFixed(1)}" r="12" /><text x="${c(m.dx).toFixed(1)}" y="${(c(m.dy) + 4).toFixed(1)}" text-anchor="middle">${esc(m.name[0].toUpperCase())}</text></g>`).join('')}
+      </svg>`;
+  }
+  function famMemberCard(m) {
+    const f = fam(), av = `<div class="avatar fam-av">${esc((m.name[0] || '?').toUpperCase())}</div>`;
+    const tag = m.demo ? '<em class="badge info">Exemple</em>' : '';
+    if (m.status === 'pending') {
+      return `<div class="item fam-item">${av}
+        <div class="body"><strong>${esc(m.name)} ${tag}</strong><span>${esc(m.relation || '')} · invitation en attente</span>
+          <span class="fam-code">Code : <b>${esc(m.code)}</b></span>
+          <span class="fam-btns"><button class="btn ghost" data-finvite="${m.id}">${icon('share')} Envoyer l’invitation</button><button class="btn ghost" data-faccept="${m.id}">Simuler l’acceptation</button></span></div>
+        <div class="actions"><button class="round" data-fdel="${m.id}" aria-label="Retirer">${icon('trash')}</button></div></div>`;
+    }
+    const sosSwitch = `<label class="fam-switch"><input type="checkbox" data-fsos="${m.id}" ${m.sos !== false ? 'checked' : ''} /> Reçoit mes SOS</label>`;
+    if (m.kind !== 'child') {
+      return `<div class="item fam-item">${av}
+        <div class="body"><strong>${esc(m.name)} ${tag}</strong><span>${esc(m.relation || 'Adulte')} · ${esc(m.phone || '')}</span>${sosSwitch}</div>
+        <div class="actions">${m.phone ? `<a class="round green" href="${tel(m.phone)}" aria-label="${t('call')}">${icon('phone')}</a>` : ''}<button class="round" data-fdel="${m.id}" aria-label="Retirer">${icon('trash')}</button></div></div>`;
+    }
+    const d = Math.hypot(m.dx, m.dy), ll = famLatLon(m);
+    return `<div class="item fam-item">${av}
+      <div class="body"><strong>${esc(m.name)} ${tag}</strong><span>${esc(m.relation || '')}</span>
+        <span class="badges"><em class="badge ${m.inside ? 'open' : 'warn'}">${m.inside ? `Dans la zone « ${esc(f.zone.name)} »` : `Hors zone · à ${fmtDist(d / 1000)}`}</em>
+        <em class="badge ${m.battery <= 20 ? 'warn' : 'info'}">Batterie ${m.battery} %</em></span>
+        <span class="fam-live"><i></i> Position en direct · ${ago(m.updated)}</span>${sosSwitch}</div>
+      <div class="actions"><a class="round" href="${mapsUrl(ll.lat, ll.lon)}" target="_blank" rel="noopener" aria-label="${t('route')}">${icon('nav')}</a>
+        ${m.phone ? `<a class="round green" href="${tel(m.phone)}" aria-label="${t('call')}">${icon('phone')}</a>` : ''}
+        <button class="round" data-fdel="${m.id}" aria-label="Retirer">${icon('trash')}</button></div></div>`;
+  }
+  const ALERT_ICON = { sos: ['bell', 'sos'], 'sos-sent': ['share', 'ok'], 'zone-out': ['pin', 'warn'], 'zone-in': ['check', 'ok'], battery: ['activity', 'warn'] };
+  function famLiveHtml() {
+    const f = fam(), kids = f.members.filter((m) => m.kind === 'child'), adults = f.members.filter((m) => m.kind !== 'child');
+    return `
+      ${famMap()}
+      <div class="section-title">Enfants suivis</div>
+      <div class="list">${kids.map(famMemberCard).join('') || '<div class="empty">Aucun enfant ajouté.</div>'}</div>
+      <div class="section-title">Autres adultes de la famille</div>
+      <div class="list">${adults.map(famMemberCard).join('') || '<div class="empty">Aucun adulte ajouté.</div>'}</div>
+      <div class="section-title">Alertes en direct</div>
+      <div class="list">${f.alerts.slice(0, 8).map((a) => {
+        const [ic, cls] = ALERT_ICON[a.type] || ['bell', 'ok'];
+        return `<div class="item fam-alert ${cls}"><div class="ico">${icon(ic)}</div><div class="body"><strong>${esc(a.text)}</strong><span>${ago(a.ts)}</span></div></div>`;
+      }).join('') || '<div class="empty">Aucune alerte pour le moment.</div>'}</div>`;
+  }
+
+  let famPlanChoice = 'month';
+  function viewFamilyPaywall() {
+    const P = FAMILY_PLAN.prices;
+    return `
+      <div class="fam-hero"><div class="ico">${icon('shield')}</div>
+        <div><small>Option payante</small><h1>${FAMILY_PLAN.name}</h1></div></div>
+      <p class="page-sub">Installez My Med Care sur le téléphone de vos enfants et sachez où ils sont, avec des alertes en direct.</p>
+      <div class="card fam-perks">
+        ${[['pin', 'Position en direct', 'Voyez chaque enfant sur la carte, partout où il se trouve.'],
+          ['bell', 'Alertes en direct', 'Il quitte ou rejoint une zone, sa batterie est faible, il déclenche un SOS.'],
+          ['share', 'SOS automatique', 'Un message SOS avec sa position part aux membres que vous désignez.'],
+          ['users', `Jusqu’à ${FAMILY_PLAN.max} membres`, 'Enfants et adultes de la famille, sans engagement.']]
+          .map(([ic, a, b]) => `<div class="perk"><div class="ico c-violet">${icon(ic)}</div><div><strong>${a}</strong><span>${b}</span></div></div>`).join('')}
+      </div>
+      <div class="segmented" id="planSeg">
+        <button data-plan="month" class="${famPlanChoice === 'month' ? 'active' : ''}">Mensuel · ${fmtEUR(P.month)}</button>
+        <button data-plan="year" class="${famPlanChoice === 'year' ? 'active' : ''}">Annuel · ${fmtEUR(P.year)}</button>
+      </div>
+      <button class="btn block" id="famBuy">${icon('shield')} S’abonner</button>
+      <div class="card" id="famCheckout" hidden>
+        <strong>Paiement sécurisé</strong>
+        <div class="kv"><span>${FAMILY_PLAN.name}</span><b id="famSum">${planLabel(famPlanChoice)}</b></div>
+        <p class="note" style="margin:6px 0 12px">Sans engagement, résiliable à tout moment depuis cette page.</p>
+        <button class="btn teal block" id="famPay">Payer</button>
+      </div>
+      <p class="note">Prototype : le paiement est simulé, aucun montant n’est débité. Les tarifs sont indicatifs.</p>
+      <p class="note">${icon('shield', 'class="inline-ico"')} Le bouton SOS, l’appel au ${C().main} et le partage manuel de votre position restent gratuits pour tous.</p>`;
+  }
+  function viewFamilyParent() {
+    const f = fam(), full = f.members.length >= FAMILY_PLAN.max;
+    return `
+      <div class="fam-hero on"><div class="ico">${icon('shield')}</div>
+        <div><small>Option Famille · actif</small><h1>Ma famille</h1></div></div>
+      <p class="page-sub">Positions et alertes en direct de vos enfants.</p>
+      <div id="famLive"></div>
+      <div class="section-title">Zone de sécurité « ${esc(f.zone.name)} »</div>
+      <div class="segmented" id="zoneSeg">${ZONE_RADII.map(([r, l]) => `<button data-zone="${r}" class="${f.zone.radius === r ? 'active' : ''}">${l}</button>`).join('')}</div>
+      <p class="note" style="margin-top:-6px">Vous êtes alerté dès qu’un enfant en sort ou y revient.</p>
+      <div class="section-title">Ajouter un membre</div>
+      <form class="card" id="famForm">
+        <div class="field"><label for="f-name">Prénom</label><input id="f-name" name="name" required ${full ? 'disabled' : ''} /></div>
+        <div class="two">
+          <div class="field"><label for="f-rel">Lien</label><input id="f-rel" name="relation" placeholder="Fils, 10 ans…" ${full ? 'disabled' : ''} /></div>
+          <div class="field"><label for="f-kind">Type</label><select id="f-kind" name="kind" ${full ? 'disabled' : ''}><option value="child">Enfant (suivi)</option><option value="adult">Adulte</option></select></div>
+        </div>
+        <div class="field"><label for="f-phone">Téléphone</label><input id="f-phone" name="phone" type="tel" ${full ? 'disabled' : ''} /></div>
+        <button class="btn block" type="submit" ${full ? 'disabled' : ''}>${icon('plus')} Créer l’invitation</button>
+        <p class="note" style="margin:8px 0 0">${full ? `Maximum atteint (${FAMILY_PLAN.max} membres).` : 'Un code est généré : saisi sur le téléphone de l’enfant, il lance le partage de position. L’enfant en est informé en permanence.'}</p>
+      </form>
+      <div class="section-title">SOS automatique</div>
+      <div class="card"><p class="fiche-text" style="margin:0">Quand vous déclenchez un SOS, un message avec votre position est envoyé aux membres cochés « Reçoit mes SOS ».</p></div>
+      <details class="card fam-demo"><summary>Démonstration</summary>
+        <p class="note">Simule des événements pour montrer les alertes en direct.</p>
+        <div class="fam-btns">
+          <button class="btn ghost" id="demoZone">Léa sort / rentre de la zone</button>
+          <button class="btn ghost" id="demoSos">Hugo déclenche un SOS</button>
+          <button class="btn ghost" id="demoChild">Voir l’écran d’un enfant</button>
+        </div></details>
+      <div class="section-title">Abonnement</div>
+      <div class="card">
+        <div class="kv"><span>Formule</span><b>${planLabel(f.plan.id)}</b></div>
+        <div class="kv"><span>Depuis le</span><b>${new Date(f.plan.since).toLocaleDateString('fr-FR')}</b></div>
+        <button class="btn ghost block danger" id="famCancel" style="margin-top:12px">Résilier l’abonnement</button>
+        <div id="famCancelConfirm" hidden style="margin-top:10px"><strong>Arrêter le suivi et les alertes ?</strong>
+          <div class="confirm-row"><button class="btn ghost" id="famCancelNo">${t('cancel')}</button><button class="btn red" id="famCancelYes">Résilier</button></div></div>
+      </div>`;
+  }
+  function viewFamilyChild() {
+    const f = fam(), p = state.profile;
+    const guardians = [`${p.firstName} ${p.lastName}`, ...f.members.filter((m) => m.kind === 'adult' && m.status === 'active').map((m) => m.name)];
+    return `
+      <div class="fam-banner"><span class="dot"></span><div><strong>Partage de position actif</strong><span>Tes parents voient où tu es, en direct.</span></div></div>
+      <div class="card"><div class="section-title" style="margin-top:0">Qui voit ma position</div>
+        <div class="tags">${guardians.map((g) => `<span class="tag teal">${esc(g)}</span>`).join('')}</div>
+        <p class="note" style="margin:10px 0 0">Si tu as un problème, appuie sur SOS : un message avec ta position est envoyé à ces personnes et l’appel au ${C().main} est lancé.</p></div>
+      <a class="btn red block" href="#/sos">${icon('phone')} SOS</a>
+      <button class="btn ghost block" id="childBack" style="margin-top:12px">Revenir à l’appareil du parent</button>
+      <p class="note">Écran de démonstration de l’appareil d’un enfant.</p>`;
+  }
+  const viewFamily = () => (!famActive() ? viewFamilyPaywall() : fam().role === 'child' ? viewFamilyChild() : viewFamilyParent());
+
+  function bindFamily() {
+    if (!famActive()) {
+      document.querySelectorAll('[data-plan]').forEach((b) => b.addEventListener('click', () => {
+        famPlanChoice = b.dataset.plan;
+        document.querySelectorAll('[data-plan]').forEach((x) => x.classList.toggle('active', x === b));
+        $('#famSum').textContent = planLabel(famPlanChoice);
+      }));
+      $('#famBuy').addEventListener('click', () => { $('#famCheckout').hidden = false; $('#famBuy').hidden = true; });
+      $('#famPay').addEventListener('click', async (e) => {
+        e.target.disabled = true; e.target.textContent = 'Paiement en cours…';
+        const plan = await payments.checkout(famPlanChoice);
+        fam().plan = plan; fam().role = 'parent'; seedFamily(); saveFamily();
+        toast('Option Famille activée'); render();
+      });
+      return;
+    }
+    if (fam().role === 'child') {
+      $('#childBack').addEventListener('click', () => { fam().role = 'parent'; saveFamily(); render(); });
+      return;
+    }
+    const live = $('#famLive'), draw = () => { if ($('#famLive')) live.innerHTML = famLiveHtml(); };
+    const find = (id) => fam().members.find((m) => m.id === id);
+    draw();
+    searchOrigin().then((o) => { famOrigin = o; draw(); });
+    famTimer = setInterval(() => { famTick(); draw(); }, 4000);
+    live.addEventListener('click', (e) => {
+      const del = e.target.closest('[data-fdel]'), inv = e.target.closest('[data-finvite]'), acc = e.target.closest('[data-faccept]');
+      if (del) { fam().members = fam().members.filter((m) => m.id !== del.dataset.fdel); saveFamily(); draw(); toast('Membre retiré'); }
+      if (inv) {
+        const m = find(inv.dataset.finvite), text = `Rejoins ma famille sur My Med Care : code ${m.code}`;
+        if (navigator.share) navigator.share({ title: 'My Med Care Famille', text }).catch(() => {});
+        else navigator.clipboard.writeText(text).then(() => toast('Invitation copiée'), () => toast(text));
+      }
+      if (acc) {
+        const m = find(acc.dataset.faccept); Object.assign(m, { status: 'active', inside: true, updated: Date.now(), battery: 60 + Math.round(Math.random() * 35), dx: Math.round((Math.random() - .5) * 200), dy: Math.round((Math.random() - .5) * 200) });
+        saveFamily(); draw(); toast(`${m.name} a rejoint la famille`);
+      }
+    });
+    live.addEventListener('change', (e) => {
+      const sw = e.target.closest('[data-fsos]');
+      if (sw) { find(sw.dataset.fsos).sos = sw.checked; saveFamily(); }
+    });
+    document.querySelectorAll('[data-zone]').forEach((b) => b.addEventListener('click', () => {
+      fam().zone.radius = Number(b.dataset.zone); saveFamily();
+      document.querySelectorAll('[data-zone]').forEach((x) => x.classList.toggle('active', x === b)); draw();
+    }));
+    $('#famForm').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const fd = new FormData(e.target), code = Array.from({ length: 6 }, () => 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'[Math.floor(Math.random() * 31)]).join('');
+      fam().members.push({ id: 'm' + Date.now(), name: fd.get('name').trim(), relation: (fd.get('relation') || '').trim(), kind: fd.get('kind'), phone: (fd.get('phone') || '').trim(), status: 'pending', code, sos: true, battery: 100, dx: 0, dy: 0 });
+      saveFamily(); toast('Invitation créée : envoyez le code'); render();
+    });
+    $('#demoZone').addEventListener('click', () => { const m = fam().members.find((x) => x.id === 'm1') || fam().members.find((x) => x.kind === 'child' && x.status === 'active'); if (!m) return; m.away = !m.away; if (!m.away) { m.dx = 40; m.dy = 20; } else m.dx = fam().zone.radius + 150; famTick(); draw(); });
+    $('#demoSos').addEventListener('click', () => {
+      const m = fam().members.find((x) => x.id === 'm2') || fam().members.find((x) => x.kind === 'child' && x.status === 'active'); if (!m) return;
+      addAlert('sos', `SOS de ${m.name} : besoin d’aide`, m.id); toast(`🚨 SOS de ${m.name}`); if (navigator.vibrate) navigator.vibrate([200, 100, 200]); draw();
+    });
+    $('#demoChild').addEventListener('click', () => { fam().role = 'child'; saveFamily(); render(); });
+    $('#famCancel').addEventListener('click', () => { $('#famCancelConfirm').hidden = false; });
+    $('#famCancelNo').addEventListener('click', () => { $('#famCancelConfirm').hidden = true; });
+    $('#famCancelYes').addEventListener('click', () => { fam().plan = null; saveFamily(); toast('Abonnement résilié'); render(); });
+  }
+
   /* --- Notifications --- */
   function viewNotifications() {
     state.readNotifs = true; store.set('readNotifs', true);
@@ -2157,7 +2501,7 @@ window.MMC_DEFAULT_HOME = 'radial';
     $('#resetData').addEventListener('click', () => { $('#resetConfirm').hidden = false; });
     $('#resetNo').addEventListener('click', () => { $('#resetConfirm').hidden = true; });
     $('#resetYes').addEventListener('click', () => {
-      ['profile', 'contacts', 'meds', 'tracking', 'readNotifs', 'teleDocs', 'radius'].forEach((k) => { try { localStorage.removeItem('mmc:' + k); } catch { /* */ } });
+      ['profile', 'contacts', 'meds', 'tracking', 'readNotifs', 'teleDocs', 'radius', 'family'].forEach((k) => { try { localStorage.removeItem('mmc:' + k); } catch { /* */ } });
       state.profile = { ...DEFAULT_PROFILE }; state.contacts = [...DEFAULT_CONTACTS]; state.meds = [...DEFAULT_MEDS]; state.readNotifs = false; state.teleDocs = []; state.radius = 20;
       toast('Données réinitialisées'); render();
     });
@@ -2236,6 +2580,7 @@ window.MMC_DEFAULT_HOME = 'radial';
     'join-doctor': { view: viewJoinDoctor, bind: bindJoinDoctor },
     meds: { view: viewMeds, bind: bindMeds },
     contacts: { view: viewContacts, bind: bindContacts },
+    family: { view: viewFamily, bind: bindFamily, cleanup: cleanupFamily },
     notifications: { view: viewNotifications },
     settings: { view: viewSettings, bind: bindSettings },
     country: { view: viewCountry, bind: bindCountry },
@@ -2308,6 +2653,7 @@ window.MMC_DEFAULT_HOME = 'radial';
       ${link('#/teleconsult', 'video', t('teleconsult'))}
       ${link('#/meds', 'pill', t('meds'))}
       ${link('#/contacts', 'users', t('contacts'))}
+      ${link('#/family', 'shield', t('family'))}
       ${link('#/first-aid', 'heart', t('firstAid'))}
       ${link('#/country', 'globe', 'Pays de séjour : ' + C().flag + ' ' + C().name)}
       ${link('#/settings', 'settings', t('settings'))}
