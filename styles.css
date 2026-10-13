@@ -429,6 +429,7 @@ details.acc ol { margin: 0 0 16px; padding-left: 20px; color: var(--ink-700); fo
 .radius-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: -4px 0 14px; font-size: 13px; font-weight: 600; color: var(--ink-700); }
 .segmented.mini { margin: 0; padding: 3px; flex: none; }
 .segmented.mini button { padding: 6px 12px; font-size: 12.5px; }
+#placeTabs button { padding: 9px 6px; font-size: 12.5px; }
 .place-origin { margin: 0 0 12px; }
 .place-item .body strong { white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
 .dist { flex: none; text-align: right; min-width: 58px; }
@@ -582,6 +583,7 @@ a.dist { color: inherit; }
 .o-teal { background: linear-gradient(145deg, #4CC6CA, #2A9599); }
 .o-moss { background: linear-gradient(145deg, #7DB36A, #3E7F55); }
 .o-violet { background: linear-gradient(145deg, #8E79E8, #5F48C9); }
+.o-amber { background: linear-gradient(145deg, #F6B656, #D9861C); }
 .r-sos {
   position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
   width: 40%; aspect-ratio: 1; border-radius: 50%; display: grid; place-content: center; color: #fff; text-align: center;
@@ -595,7 +597,7 @@ a.dist { color: inherit; }
 .r-sos small { font-size: 11px; letter-spacing: .16em; margin-top: 4px; opacity: .95; }
 .r-sos:active { transform: translate(-50%, -50%) scale(.96); }
 .r-sos:focus-visible { outline: 3px solid var(--teal-500); outline-offset: 10px; }
-.r-more { position: relative; z-index: 1; display: flex; gap: 10px; justify-content: center; margin: 4px 0 18px; flex-wrap: wrap; }
+.r-more { position: relative; z-index: 1; display: flex; gap: 10px; justify-content: center; margin: 18px 0 18px; flex-wrap: wrap; }
 .r-more a {
   display: inline-flex; align-items: center; gap: 8px; padding: 11px 14px; border-radius: 14px;
   background: var(--surface); box-shadow: var(--shadow-sm); font-weight: 700; font-size: 13px;

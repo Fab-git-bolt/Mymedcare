@@ -19,6 +19,7 @@
     hospital: '<path d="M12 6v4M14 8h-4"/><path d="M18 22V5a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v17"/><path d="M6 12H4a2 2 0 0 0-2 2v8h20v-8a2 2 0 0 0-2-2h-2M10 22v-4h4v4"/>',
     pharmacy: '<path d="M10 2h4a1 1 0 0 1 1 1v5h5a1 1 0 0 1 1 1v4a1 1 0 0 1-1 1h-5v5a1 1 0 0 1-1 1h-4a1 1 0 0 1-1-1v-5H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1h5V3a1 1 0 0 1 1-1z"/>',
     doctor: '<path d="M11 2v2M5 2v2M5 3H4a2 2 0 0 0-2 2v4a6 6 0 0 0 12 0V5a2 2 0 0 0-2-2h-1"/><path d="M8 15a6 6 0 0 0 12 0v-3"/><circle cx="20" cy="10" r="2"/>',
+    paw: '<circle cx="11" cy="4" r="2"/><circle cx="18" cy="8" r="2"/><circle cx="20" cy="16" r="2"/><path d="M9 10a5 5 0 0 1 5 5v3.5a3.5 3.5 0 0 1-6.84 1.045Q6.52 17.48 4.46 16.84A3.5 3.5 0 0 1 5.5 10Z"/>',
     phone: '<path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.8 19.8 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.18 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.1 9.9a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.9.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/>',
     nav: '<path d="m3 11 19-9-9 19-2-8z"/>',
     search: '<circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/>',
@@ -104,8 +105,8 @@
     fr: {
       hello: 'Bonjour', home: 'Accueil', around: 'Autour', sos: 'SOS', file: 'Ma fiche', outdoor: 'Outdoor',
       sosUrgence: 'URGENCE', sosTitle: 'Besoin d’aide ?', sosDesc: 'Appuyez pour alerter les secours et vos proches avec votre position.',
-      services: 'Services', translation: 'Traduction', hospitals: 'Hôpitaux', pharmacies: 'Pharmacies', doctors: 'Médecins',
-      translationSub: 'Phrases médicales', hospitalsSub: 'Urgences proches', pharmaciesSub: 'Ouvertes près de vous', doctorsSub: 'Généralistes & spécialistes',
+      services: 'Services', translation: 'Traduction', hospitals: 'Hôpitaux', pharmacies: 'Pharmacies', doctors: 'Médecins', vets: 'Vétérinaires',
+      translationSub: 'Phrases médicales', hospitalsSub: 'Urgences proches', pharmaciesSub: 'Ouvertes près de vous', doctorsSub: 'Généralistes & spécialistes', vetsSub: 'Soins pour vos animaux',
       fileSub: 'Dossier médical', outdoorSub: 'Montagne & aventure', teleconsult: 'Téléconsultation', teleconsultSub: 'Un médecin en vidéo',
       meds: 'Médicaments', medsSub: 'Rappels de prise', contacts: 'Proches', contactsSub: 'Contacts d’urgence', firstAid: 'Premiers secours', firstAidSub: 'Gestes qui sauvent',
       tagline: 'Ma sécurité, partout, tout le temps', notifications: 'Notifications', settings: 'Réglages', about: 'À propos',
@@ -118,8 +119,8 @@
     en: {
       hello: 'Hello', home: 'Home', around: 'Nearby', sos: 'SOS', file: 'My file', outdoor: 'Outdoor',
       sosUrgence: 'EMERGENCY', sosTitle: 'Need help?', sosDesc: 'Tap to alert emergency services and your contacts with your location.',
-      services: 'Services', translation: 'Translation', hospitals: 'Hospitals', pharmacies: 'Pharmacies', doctors: 'Doctors',
-      translationSub: 'Medical phrases', hospitalsSub: 'Nearby ER', pharmaciesSub: 'Open near you', doctorsSub: 'GPs & specialists',
+      services: 'Services', translation: 'Translation', hospitals: 'Hospitals', pharmacies: 'Pharmacies', doctors: 'Doctors', vets: 'Vets',
+      translationSub: 'Medical phrases', hospitalsSub: 'Nearby ER', pharmaciesSub: 'Open near you', doctorsSub: 'GPs & specialists', vetsSub: 'Care for your pets',
       fileSub: 'Medical record', outdoorSub: 'Mountain & adventure', teleconsult: 'Teleconsultation', teleconsultSub: 'See a doctor by video',
       meds: 'Medication', medsSub: 'Intake reminders', contacts: 'Contacts', contactsSub: 'Emergency contacts', firstAid: 'First aid', firstAidSub: 'Life-saving actions',
       tagline: 'My safety, everywhere, all the time', notifications: 'Notifications', settings: 'Settings', about: 'About',
@@ -181,7 +182,7 @@
   /* ------------------------------------------------------------------ */
   /* Données : établissements partenaires                                */
   /* ------------------------------------------------------------------ */
-  // Les hôpitaux, pharmacies et médecins sont référencés par l'équipe My Med Care
+  // Les hôpitaux, pharmacies, médecins et vétérinaires sont référencés par l'équipe My Med Care
   // (partenariats) : l'utilisateur ne les ajoute pas. L'application affiche ceux
   // situés dans un rayon de 20 ou 50 km autour de la position du téléphone,
   // quel que soit le pays. Pour ce prototype, l'annuaire est généré à partir de
@@ -190,6 +191,7 @@
     hospitals: { title: 'hospitals', icon: 'hospital', color: 'c-blue' },
     pharmacies: { title: 'pharmacies', icon: 'pharmacy', color: 'c-green' },
     doctors: { title: 'doctors', icon: 'doctor', color: 'c-teal' },
+    vets: { title: 'vets', icon: 'paw', color: 'c-amber' },
   };
   // [ville, lat, lon] — la première est la ville de référence du pays
   const PARTNER_TOWNS = {
@@ -227,6 +229,11 @@
       (c) => ({ name: `Centre médical international — ${c}`, tag: 'Sans rendez-vous', specialty: 'Médecine générale' }),
       (c) => ({ name: `Cabinet de pédiatrie — ${c}`, tag: '', specialty: 'Pédiatre' }),
       (c) => ({ name: `Cabinet médical de ${c}`, tag: 'Parle anglais', specialty: 'Médecin généraliste' }),
+    ],
+    vets: [
+      (c) => ({ name: `Clinique vétérinaire de ${c}`, tag: 'Urgences 24h/24', specialty: 'Clinique vétérinaire' }),
+      (c) => ({ name: `Cabinet vétérinaire du Parc — ${c}`, tag: 'Chiens & chats', specialty: 'Vétérinaire' }),
+      (c) => ({ name: `Centre vétérinaire de ${c}`, tag: 'NAC acceptés', specialty: 'Vétérinaire' }),
     ],
   };
   // Annuaire : 2 établissements dans la ville de référence, 1 par ville voisine
@@ -384,15 +391,17 @@
     { href: '#/places/hospitals', ic: 'hospital', color: 'o-red', key: 'hospitals' },
     { href: '#/places/pharmacies', ic: 'pharmacy', color: 'o-green', key: 'pharmacies' },
     { href: '#/places/doctors', ic: 'doctor', color: 'o-teal', key: 'doctors' },
+    { href: '#/places/vets', ic: 'paw', color: 'o-amber', key: 'vets' },
     { href: '#/outdoor', ic: 'mountain', color: 'o-moss', key: 'outdoor' },
     { href: '#/profile', ic: 'id', color: 'o-violet', key: 'file' },
   ];
   function viewHomeRadial() {
     const p = state.profile;
     const n = ORBIT.length;
-    // Positions sur un cercle (en % du carré), en partant d'en haut à gauche
+    // Positions sur un cercle (en % du carré), en partant d'en haut à gauche,
+    // symétriques par rapport à l'axe vertical quel que soit le nombre de fonctions
     const pos = ORBIT.map((_, i) => {
-      const a = (-120 + i * (360 / n)) * Math.PI / 180;
+      const a = (-90 - 180 / n + i * (360 / n)) * Math.PI / 180;
       return { x: 50 + 37 * Math.cos(a), y: 50 + 37 * Math.sin(a) };
     });
     return `
@@ -460,6 +469,7 @@
         ${tile('#/places/hospitals', 'hospital', 'c-red', t('hospitals'), t('hospitalsSub'))}
         ${tile('#/places/pharmacies', 'pharmacy', 'c-green', t('pharmacies'), t('pharmaciesSub'))}
         ${tile('#/places/doctors', 'doctor', 'c-teal', t('doctors'), t('doctorsSub'))}
+        ${tile('#/places/vets', 'paw', 'c-amber', t('vets'), t('vetsSub'))}
         ${tile('#/profile', 'id', 'c-violet', t('file'), t('fileSub'))}
         ${tile('#/outdoor', 'mountain', 'c-green', t('outdoor'), t('outdoorSub'))}
         ${tile('#/teleconsult', 'video', 'c-blue', t('teleconsult'), t('teleconsultSub'))}
@@ -660,6 +670,15 @@
         services: pick(['Conseil santé voyage', 'Trousse de premiers secours', 'Médicaments sans ordonnance', 'Renouvellement d’ordonnance étrangère (selon la loi)', 'Matériel orthopédique', 'Tests rapides', 'Vaccination'], 4),
         langs, about: `Pharmacie partenaire de My Med Care. L’équipe conseille les voyageurs et aide à trouver l’équivalent local d’un médicament habituel.`,
         extras: [['Paiement par carte', 'Oui'], ['Accès handicapé', h % 2 ? 'Oui' : 'Partiel'], ['Livraison', h % 3 ? 'Non' : 'Oui, dans la ville']],
+      };
+    }
+    if (x.type === 'vets') {
+      const er = /urgence/i.test(x.tag);
+      return {
+        kind: x.specialty || 'Vétérinaire', hours: er ? [['Consultations', 'Lun–Sam 8h–20h'], ['Urgences', '24h/24 · 7j/7']] : [['Lun–Ven', '8h30–19h'], ['Samedi', '9h–12h30'], ['Dimanche', 'Fermé']],
+        services: pick(['Consultation', 'Urgences animales', 'Vaccination & passeport européen', 'Certificat de voyage', 'Chirurgie', 'Radiographie', 'Identification (puce)', 'Nouveaux animaux de compagnie'], 4),
+        langs, about: `${x.name} soigne les animaux des voyageurs : blessure en promenade, piqûre, intoxication, ou formalités sanitaires pour poursuivre le voyage.`,
+        extras: [['Rendez-vous', er ? 'Avec ou sans' : 'Sur rendez-vous'], ['Animaux', /NAC/.test(x.tag) ? 'Chiens, chats, NAC' : 'Chiens & chats'], ['Paiement par carte', 'Oui']],
       };
     }
     return {
@@ -1438,6 +1457,7 @@
       ${link('#/places/hospitals', 'hospital', t('hospitals'))}
       ${link('#/places/pharmacies', 'pharmacy', t('pharmacies'))}
       ${link('#/places/doctors', 'doctor', t('doctors'))}
+      ${link('#/places/vets', 'paw', t('vets'))}
       ${link('#/profile', 'id', t('file'))}
       ${link('#/outdoor', 'mountain', t('outdoor'))}
       ${link('#/teleconsult', 'video', t('teleconsult'))}
