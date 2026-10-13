@@ -1448,6 +1448,15 @@
     const relief = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', { maxZoom: 17, subdomains: 'abc', attribution: '© OpenStreetMap, SRTM · © <a href="https://opentopomap.org" target="_blank" rel="noopener">OpenTopoMap</a>' });
     const map = L.map(el, { center, zoom, scrollWheelZoom: false });
     plan.addTo(map);
+    // Fonds de carte bloqué (hors ligne, page restreinte) : on le dit et on garde les repères
+    let ok = 0, bad = 0;
+    plan.on('tileload', () => { ok += 1; el.classList.remove('no-tiles'); });
+    plan.on('tileerror', () => {
+      bad += 1;
+      if (ok || bad < 3 || el.querySelector('.map-note')) return;
+      el.classList.add('no-tiles');
+      el.insertAdjacentHTML('beforeend', '<div class="map-note">Fond de carte non chargé : connexion indisponible, ou page qui bloque les cartes. Ouvrez l’application dans un navigateur.</div>');
+    });
     if (layers) L.control.layers({ Plan: plan, Relief: relief }, null, { position: 'topright', collapsed: false }).addTo(map);
     setTimeout(() => map.invalidateSize(), 80);
     return map;
