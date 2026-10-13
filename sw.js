@@ -1,6 +1,6 @@
 /* Service worker : rend l'application disponible hors ligne */
-const CACHE = 'mymedcare-v10';
-const ASSETS = ['./', 'index.html', 'styles.css', 'app.js', 'assets/logo.svg', 'manifest.webmanifest'];
+const CACHE = 'mymedcare-v11';
+const ASSETS = ['./', 'index.html', 'styles.css', 'app.js', 'assets/logo.svg', 'manifest.webmanifest', 'assets/vendor/leaflet.js', 'assets/vendor/leaflet.css'];
 
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(ASSETS)).then(() => self.skipWaiting()));

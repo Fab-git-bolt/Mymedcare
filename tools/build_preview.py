@@ -11,6 +11,12 @@ HOME = sys.argv[2] if len(sys.argv) > 2 else ''
 logo = 'data:image/svg+xml;base64,' + base64.b64encode(open(os.path.join(ROOT, 'assets/logo.svg'), 'rb').read()).decode()
 css = open(os.path.join(ROOT, 'styles.css')).read()
 js = open(os.path.join(ROOT, 'app.js')).read()
+# Leaflet (cartes) : bibliothèque et feuille de style intégrées au fichier
+leaflet_js = open(os.path.join(ROOT, 'assets/vendor/leaflet.js')).read()
+leaflet_css = open(os.path.join(ROOT, 'assets/vendor/leaflet.css')).read()
+for img in ('layers.png', 'layers-2x.png', 'marker-icon.png'):
+    data = base64.b64encode(open(os.path.join(ROOT, 'assets/vendor', img), 'rb').read()).decode()
+    leaflet_css = leaflet_css.replace('images/' + img, 'data:image/png;base64,' + data)
 html = open(os.path.join(ROOT, 'index.html')).read()
 
 body = html.split('<body>')[1].split('</body>')[0].replace('<script src="app.js"></script>', '')
@@ -175,11 +181,13 @@ out = f"""<title>My Med Care</title>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
+{leaflet_css}
 {css}
 {frame_css}
 </style>
 {stage}
 <script>
+{leaflet_js}
 {home_js}{js}
 {frame_js}
 </script>

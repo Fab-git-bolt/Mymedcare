@@ -760,6 +760,7 @@
             : g.openNow === undefined ? '' : `<em class="badge ${g.openNow ? 'open' : 'warn'}">${g.openNow ? 'Ouvert maintenant' : 'Fermé actuellement'}</em>`}
         </div>
       </div>
+      ${hasMap() ? '<div class="place-map" id="placeMap" role="application" aria-label="Carte de l’établissement"></div>' : ''}
       <div class="fiche-dist" id="ficheDist"><div class="spinner" style="margin:0"></div><span>Calcul de la distance…</span></div>
       <div class="btn-row">
         ${g.phone ? `<a class="btn" href="${tel(g.phone)}">${icon('phone')} ${t('call')}</a>` : ''}
@@ -792,9 +793,15 @@
       <p class="g-source">Informations : Google${g.mapsUri ? ` · <a class="link-accent" href="${esc(g.mapsUri)}" target="_blank" rel="noopener">Voir sur Google Maps</a>` : ''}</p>
       <p class="note">Prototype : établissement fictif, données Google simulées.</p>`;
   }
+  let placeMapObj = null;
+  const cleanupPlace = () => { if (placeMapObj) { placeMapObj.remove(); placeMapObj = null; } };
   function bindPlace(id) {
     const x = PARTNERS.find((p) => p.id === id);
     if (!x) return;
+    if (hasMap() && $('#placeMap')) {
+      placeMapObj = newMap($('#placeMap'), [x.lat, x.lon], 15, { layers: false });
+      L.marker([x.lat, x.lon], { icon: pinIcon(PLACE_TYPES[x.type].title === 'vets' ? '🐾' : '+', 'place'), title: x.name }).addTo(placeMapObj);
+    }
     searchOrigin().then((o) => {
       const el = $('#ficheDist');
       if (!el || currentRoute().arg !== id) return;
@@ -972,6 +979,10 @@
           <div class="body"><strong>Suivi de sortie</strong><span>Vos proches suivent votre parcours</span></div>
           <span class="switch"><input type="checkbox" id="trackToggle" ${state.tracking ? 'checked' : ''}/><i></i></span>
         </label>
+        <button class="item" id="outFamily" style="text-align:left">
+          <div class="ico c-violet">${icon('shield')}</div>
+          <div class="body"><strong>Partir en sortie avec ma famille</strong><span>${famActive() ? 'Position partagée, retour prévu surveillé' : 'Option Famille : alerte si pas de nouvelles'}</span></div>
+        </button>
         <button class="item" id="outShare" style="text-align:left">
           <div class="ico c-blue">${icon('share')}</div>
           <div class="body"><strong>Envoyer mes coordonnées</strong><span>SMS / message aux secours ou proches</span></div>
@@ -1020,6 +1031,7 @@
       state.tracking = e.target.checked; store.set('tracking', state.tracking);
       toast(state.tracking ? 'Suivi activé — vos proches sont prévenus' : 'Suivi désactivé');
     });
+    $('#outFamily').addEventListener('click', () => { if (famActive()) { fam().role = 'trek'; saveFamily(); } location.hash = '#/family'; });
     $('#outShare').addEventListener('click', sharePosition);
     fill(state.position);
   }
@@ -1342,6 +1354,9 @@
   const payments = {
     async checkout(planId) { await sleep(1400); return { id: planId, since: new Date().toISOString() }; },
   };
+  const fmtWhen = (ts) => new Date(ts).toLocaleString('fr-FR', { weekday: 'short', hour: '2-digit', minute: '2-digit' });
+  const fmtSpan = (ms) => { const a = Math.abs(ms), h = Math.round(a / 3600e3); return h < 1 ? Math.max(1, Math.round(a / 60000)) + ' min' : h + ' h'; };
+  const needsHelp = (m) => !!(m.abs && m.trek && (!m.trek.signal || Date.now() > m.trek.backBy || (m.sosAt && Date.now() - m.sosAt < 864e5)));
   const ago = (ts) => {
     const s = Math.round((Date.now() - ts) / 1000);
     return s < 10 ? 'à l’instant' : s < 60 ? `il y a ${s} s` : s < 3600 ? `il y a ${Math.round(s / 60)} min` : `il y a ${Math.round(s / 3600)} h`;
@@ -1352,20 +1367,27 @@
     fam().alerts = fam().alerts.slice(0, 20); saveFamily();
   }
   const seedFamily = () => {
-    if (fam().members.length) return;
+    const f = fam();
+    if (f.members.length && !f.members.some((m) => m.demo)) return;
     const base = { status: 'active', sos: true, inside: true, updated: Date.now(), demo: true };
-    fam().members = [
+    const demo = [
       { ...base, id: 'm1', name: 'Léa', relation: 'Fille, 12 ans', kind: 'child', phone: '+33 6 11 22 33 44', dx: 70, dy: -50, battery: 76 },
       { ...base, id: 'm2', name: 'Hugo', relation: 'Fils, 9 ans', kind: 'child', phone: '+33 6 55 66 77 88', dx: -110, dy: 90, battery: 24 },
-      { ...base, id: 'm3', name: 'Julie Martin', relation: 'Conjointe', kind: 'adult', phone: '+33 6 12 34 56 78', dx: 0, dy: 0, battery: 100 },
+      { ...base, id: 'm3', name: 'Julie Martin', relation: 'Conjointe', kind: 'adult', phone: '+33 6 12 34 56 78', dx: 0, dy: 0, battery: 100, share: false },
+      // Adulte en trek à l'étranger : position absolue, retour prévu surveillé
+      { ...base, id: 'm4', name: 'Lucas', relation: 'Fils, 24 ans', kind: 'adult', phone: '+1 403 555 0142', share: true, battery: 58,
+        abs: { lat: 51.4254, lon: -116.1773, alt: 1850, place: 'Lake Louise, Alberta', country: 'CA' },
+        trek: { name: 'Trek dans les Rocheuses canadiennes', backBy: Date.now() + 30 * 3600e3, signal: true },
+        trail: Array.from({ length: 14 }, (_, i) => (i === 13 ? [51.4254, -116.1773] : [51.4254 - (13 - i) * .0021 + Math.sin(i) * .0006, -116.1773 - (13 - i) * .0032 + Math.cos(i * 1.3) * .0007])) },
     ];
+    demo.forEach((d) => { if (!f.members.some((m) => m.id === d.id)) f.members.push(d); });
     saveFamily();
   };
   // Destinataires du message SOS : les membres désignés (ou les responsables, sur l'appareil d'un enfant)
   function familySosRecipients() {
     if (!famActive()) return [];
     const f = fam();
-    if (f.role === 'child') return [{ name: `${state.profile.firstName} ${state.profile.lastName}`, phone: '', owner: true }, ...f.members.filter((m) => m.kind === 'adult' && m.status === 'active')];
+    if (f.role !== 'parent') return [{ name: `${state.profile.firstName} ${state.profile.lastName}`, phone: '', owner: true }, ...f.members.filter((m) => m.kind === 'adult' && m.status === 'active')];
     return f.members.filter((m) => m.sos !== false);
   }
   async function notifyFamilySos() {
@@ -1383,7 +1405,7 @@
   // Simulation des positions (en production : positions reçues du serveur)
   function famTick() {
     const f = fam(), r = f.zone.radius;
-    f.members.filter((m) => m.status === 'active' && m.kind === 'child').forEach((m) => {
+    f.members.filter((m) => m.status === 'active' && m.kind === 'child' && !m.abs).forEach((m) => {
       m.dx += (Math.random() - .5) * 50; m.dy += (Math.random() - .5) * 50;
       if (m.away) m.dx = Math.max(m.dx, r + 100);
       else { const d = Math.hypot(m.dx, m.dy), cap = r * .7; if (d > cap) { m.dx *= cap / d; m.dy *= cap / d; } }
@@ -1397,10 +1419,87 @@
       m.inside = inside;
       if (m.battery <= 20 && !m.lowAlert) { m.lowAlert = true; addAlert('battery', `Batterie faible : ${m.name} (${m.battery} %)`, m.id); toast(`Batterie faible : ${m.name}`); }
     });
+    f.members.filter((m) => m.status === 'active' && m.abs).forEach((m) => {
+      const tk = m.trek;
+      if (!tk || tk.signal) {
+        m.abs.lat += (Math.random() - .5) * .0006; m.abs.lon += (Math.random() - .5) * .0006; m.abs.alt += Math.round((Math.random() - .5) * 6);
+        m.updated = Date.now(); if (Math.random() < .05) m.battery = Math.max(1, m.battery - 1);
+        m.trail = [...(m.trail || []), [m.abs.lat, m.abs.lon]].slice(-80);
+      }
+      if (tk && !tk.overdueAlert && Date.now() > tk.backBy) {
+        tk.overdueAlert = true; const msg = `Retour dépassé : ${m.name} (prévu ${fmtWhen(tk.backBy)})`;
+        addAlert('overdue', msg, m.id); toast(msg);
+      }
+    });
     saveFamily();
   }
-  let famTimer = null, famOrigin = null;
-  const cleanupFamily = () => { clearInterval(famTimer); famTimer = null; };
+  let famTimer = null, famOrigin = null, famMapObj = null, famMapState = null;
+  const cleanupFamily = () => { clearInterval(famTimer); famTimer = null; if (famMapObj) { famMapObj.remove(); famMapObj = null; famMapState = null; } };
+
+  /* --- Cartes (Leaflet + OpenStreetMap) --- */
+  // Deux fonds libres : « Plan » (rues, cours d'eau, bâtiments) et « Relief »
+  // (courbes de niveau, sentiers, rivières : utile en montagne). Les serveurs de
+  // tuiles publics d'OpenStreetMap conviennent à un prototype ; en production,
+  // prendre un fournisseur avec offre gratuite (MapTiler, Stadia Maps) ou héberger
+  // ses propres tuiles. Sans Leaflet (ou hors ligne), l'application garde un schéma.
+  const hasMap = () => typeof window.L !== 'undefined';
+  function newMap(el, center, zoom, { layers = true } = {}) {
+    const plan = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>' });
+    const relief = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', { maxZoom: 17, subdomains: 'abc', attribution: '© OpenStreetMap, SRTM · © <a href="https://opentopomap.org" target="_blank" rel="noopener">OpenTopoMap</a>' });
+    const map = L.map(el, { center, zoom, scrollWheelZoom: false });
+    plan.addTo(map);
+    if (layers) L.control.layers({ Plan: plan, Relief: relief }, null, { position: 'topright', collapsed: false }).addTo(map);
+    setTimeout(() => map.invalidateSize(), 80);
+    return map;
+  }
+  const pinIcon = (txt, cls) => L.divIcon({ className: 'map-pin-wrap', html: `<span class="map-pin ${cls}">${esc(txt)}</span>`, iconSize: [30, 30], iconAnchor: [15, 15] });
+  const homeLL = () => { const o = famOrigin || { lat: PARTNER_TOWNS.FR[0][1], lon: PARTNER_TOWNS.FR[0][2] }; return [o.lat, o.lon]; };
+  const memberLL = (m) => { if (m.abs) return [m.abs.lat, m.abs.lon]; const q = famLatLon(m); return [q.lat, q.lon]; };
+  function initFamMap() {
+    const box = $('#famMapBox'); if (!box || !hasMap()) return;
+    const home = homeLL(), z = fam().zone;
+    famMapObj = newMap(box, home, 14);
+    famMapState = {
+      markers: {}, trails: {}, fitted: false,
+      zone: L.circle(home, { radius: z.radius, color: '#35B0B5', weight: 2, dashArray: '6 6', fillColor: '#35B0B5', fillOpacity: .12 }).addTo(famMapObj),
+      home: L.marker(home, { icon: pinIcon('⌂', 'home'), title: z.name }).addTo(famMapObj),
+    };
+  }
+  function focusFam(which) {
+    if (!famMapObj) return;
+    const S = famMapState, f = fam();
+    if (which && which !== 'home') {
+      const m = f.members.find((x) => x.id === which); if (!m) return;
+      const pts = [memberLL(m), ...((m.trail || []).slice(-40))];
+      famMapObj.fitBounds(L.latLngBounds(pts).pad(.4), { maxZoom: 15 });
+      return;
+    }
+    const b = S.zone.getBounds();
+    f.members.filter((m) => m.status === 'active' && !m.abs && m.kind === 'child').forEach((m) => b.extend(memberLL(m)));
+    famMapObj.fitBounds(b.pad(.15));
+  }
+  function updateFamMap() {
+    if (!famMapObj) return;
+    const S = famMapState, f = fam(), home = homeLL();
+    S.zone.setLatLng(home); S.zone.setRadius(f.zone.radius); S.home.setLatLng(home);
+    const live = f.members.filter((m) => m.status === 'active' && (m.abs || m.kind === 'child'));
+    Object.keys(S.markers).forEach((id) => {
+      if (live.some((m) => m.id === id)) return;
+      S.markers[id].remove(); delete S.markers[id];
+      if (S.trails[id]) { S.trails[id].remove(); delete S.trails[id]; }
+    });
+    live.forEach((m) => {
+      const ll = memberLL(m), cls = m.abs ? (needsHelp(m) ? 'out' : 'trek') : (m.inside ? 'in' : 'out');
+      let mk = S.markers[m.id];
+      if (!mk) { mk = S.markers[m.id] = L.marker(ll, { icon: pinIcon(m.name.slice(0, 2), cls), title: m.name }).addTo(famMapObj); mk._cls = cls; }
+      else { mk.setLatLng(ll); if (mk._cls !== cls) { mk.setIcon(pinIcon(m.name.slice(0, 2), cls)); mk._cls = cls; } }
+      if (m.trail && m.trail.length > 1) {
+        if (!S.trails[m.id]) S.trails[m.id] = L.polyline(m.trail, { color: '#E0801F', weight: 3, dashArray: '2 6', opacity: .9 }).addTo(famMapObj);
+        else S.trails[m.id].setLatLngs(m.trail);
+      }
+    });
+    if (!S.fitted) { S.fitted = true; focusFam(f.members.find((m) => m.abs && needsHelp(m))?.id || 'home'); }
+  }
   const famLatLon = (m) => {
     const o = famOrigin || { lat: PARTNER_TOWNS.FR[0][1], lon: PARTNER_TOWNS.FR[0][2] };
     return { lat: o.lat + m.dy / -111320, lon: o.lon + m.dx / (111320 * Math.cos(o.lat * Math.PI / 180)) };
@@ -1430,9 +1529,22 @@
         <div class="actions"><button class="round" data-fdel="${m.id}" aria-label="Retirer">${icon('trash')}</button></div></div>`;
     }
     const sosSwitch = `<label class="fam-switch"><input type="checkbox" data-fsos="${m.id}" ${m.sos !== false ? 'checked' : ''} /> Reçoit mes SOS</label>`;
+    if (m.abs) {
+      const tk = m.trek, lost = tk && !tk.signal, late = tk && Date.now() > tk.backBy, mapUrl = `https://www.google.com/maps/search/?api=1&query=${m.abs.lat.toFixed(5)},${m.abs.lon.toFixed(5)}`;
+      return `<div class="item fam-item">${av}
+        <div class="body"><strong>${esc(m.name)} ${tag}</strong><span>${esc(m.relation || '')}</span>
+          <span class="badges">${tk ? `<em class="badge ${lost || late ? 'warn' : 'open'}">${lost ? 'Pas de réseau' : late ? 'Retour dépassé' : 'Trek en cours'}</em>` : ''}<em class="badge ${m.battery <= 20 ? 'warn' : 'info'}">Batterie ${m.battery} %</em></span>
+          ${tk ? `<span class="fam-trek"><b>${esc(tk.name)}</b><br>Retour prévu ${fmtWhen(tk.backBy)} · ${late ? `dépassé de ${fmtSpan(Date.now() - tk.backBy)}` : `dans ${fmtSpan(tk.backBy - Date.now())}`}</span>` : ''}
+          <span class="fam-pos">${lost ? 'Dernière position connue' : 'Position en direct'} : ${esc(m.abs.place)}<br>${m.abs.lat.toFixed(4)}, ${m.abs.lon.toFixed(4)} · alt. ${m.abs.alt} m · ${ago(m.updated)}</span>
+          ${sosSwitch}</div>
+        <div class="actions"><button class="round" data-fping="${m.id}" aria-label="Demander un signe de vie">${icon('message')}</button>
+          <a class="round" href="${mapUrl}" target="_blank" rel="noopener" aria-label="Voir la carte">${icon('pin')}</a>
+          ${m.phone ? `<a class="round green" href="${tel(m.phone)}" aria-label="${t('call')}">${icon('phone')}</a>` : ''}
+          <button class="round" data-fdel="${m.id}" aria-label="Retirer">${icon('trash')}</button></div></div>`;
+    }
     if (m.kind !== 'child') {
       return `<div class="item fam-item">${av}
-        <div class="body"><strong>${esc(m.name)} ${tag}</strong><span>${esc(m.relation || 'Adulte')} · ${esc(m.phone || '')}</span>${sosSwitch}</div>
+        <div class="body"><strong>${esc(m.name)} ${tag}</strong><span>${esc(m.relation || 'Adulte')} · ${esc(m.phone || '')}</span><span class="badges"><em class="badge info">Position non partagée</em></span>${sosSwitch}</div>
         <div class="actions">${m.phone ? `<a class="round green" href="${tel(m.phone)}" aria-label="${t('call')}">${icon('phone')}</a>` : ''}<button class="round" data-fdel="${m.id}" aria-label="Retirer">${icon('trash')}</button></div></div>`;
     }
     const d = Math.hypot(m.dx, m.dy), ll = famLatLon(m);
@@ -1445,13 +1557,30 @@
         ${m.phone ? `<a class="round green" href="${tel(m.phone)}" aria-label="${t('call')}">${icon('phone')}</a>` : ''}
         <button class="round" data-fdel="${m.id}" aria-label="Retirer">${icon('trash')}</button></div></div>`;
   }
-  const ALERT_ICON = { sos: ['bell', 'sos'], 'sos-sent': ['share', 'ok'], 'zone-out': ['pin', 'warn'], 'zone-in': ['check', 'ok'], battery: ['activity', 'warn'] };
+  const ALERT_ICON = { ping: ['message', 'ok'], checkin: ['check', 'ok'], overdue: ['clock', 'sos'], 'no-signal': ['clock', 'warn'], sos: ['bell', 'sos'], 'sos-sent': ['share', 'ok'], 'zone-out': ['pin', 'warn'], 'zone-in': ['check', 'ok'], battery: ['activity', 'warn'] };
+  function famRescue(m) {
+    const tk = m.trek, a = m.abs, c = COUNTRIES[a.country] || C();
+    const why = m.sosAt && Date.now() - m.sosAt < 864e5 ? `${m.name} a déclenché un SOS` : !tk.signal ? `Plus de signal depuis ${fmtSpan(Date.now() - m.updated)}` : `Retour dépassé de ${fmtSpan(Date.now() - tk.backBy)}`;
+    return `<div class="card fam-rescue"><strong>${icon('clock')} Pas de nouvelles de ${esc(m.name)}</strong>
+      <p>${esc(why)}. Dernière position connue : ${esc(a.place)}, ${a.lat.toFixed(4)}, ${a.lon.toFixed(4)}, altitude ${a.alt} m, vue ${ago(m.updated)}.</p>
+      <div class="fam-btns">
+        <a class="btn red" href="${tel(c.main)}">${icon('phone')} Appeler le ${c.main} (${esc(c.name)})</a>
+        ${m.phone ? `<a class="btn" href="${tel(m.phone)}">${icon('phone')} Appeler ${esc(m.name)}</a>` : ''}
+        <button class="btn ghost" data-fcopy="${m.id}">${icon('share')} Copier la position pour les secours</button>
+      </div>
+      <small>${esc(c.mountain ? c.mountain[1] : 'Donnez cette position aux secours locaux.')}</small></div>`;
+  }
+  const famRescueHtml = () => fam().members.filter((m) => m.kind !== 'child' && m.abs && m.status === 'active' && needsHelp(m)).map(famRescue).join('');
   function famLiveHtml() {
-    const f = fam(), kids = f.members.filter((m) => m.kind === 'child'), adults = f.members.filter((m) => m.kind !== 'child');
+    const f = fam(), kids = f.members.filter((m) => m.kind === 'child');
+    const trekkers = f.members.filter((m) => m.kind !== 'child' && m.abs && m.status === 'active');
+    const adults = f.members.filter((m) => m.kind !== 'child' && !(m.abs && m.status === 'active'));
+    const chips = [['home', 'Autour de chez moi'], ...f.members.filter((m) => m.status === 'active' && (m.abs || m.kind === 'child')).map((m) => [m.id, m.name])];
     return `
-      ${famMap()}
+      ${hasMap() ? `<div class="fam-chips">${chips.map(([id, l]) => `<button data-fview="${id}">${esc(l)}</button>`).join('')}</div>` : famMap()}
       <div class="section-title">Enfants suivis</div>
       <div class="list">${kids.map(famMemberCard).join('') || '<div class="empty">Aucun enfant ajouté.</div>'}</div>
+      ${trekkers.length ? `<div class="section-title">Adultes en sortie</div><div class="list">${trekkers.map(famMemberCard).join('')}</div>` : ''}
       <div class="section-title">Autres adultes de la famille</div>
       <div class="list">${adults.map(famMemberCard).join('') || '<div class="empty">Aucun adulte ajouté.</div>'}</div>
       <div class="section-title">Alertes en direct</div>
@@ -1494,7 +1623,9 @@
     return `
       <div class="fam-hero on"><div class="ico">${icon('shield')}</div>
         <div><small>Option Famille · actif</small><h1>Ma famille</h1></div></div>
-      <p class="page-sub">Positions et alertes en direct de vos enfants.</p>
+      <p class="page-sub">Positions et alertes en direct de vos enfants, et de vos proches en sortie.</p>
+      <div id="famRescue"></div>
+      ${hasMap() ? '<div class="fam-mapwrap"><div id="famMapBox" role="application" aria-label="Carte des positions"></div></div>' : ''}
       <div id="famLive"></div>
       <div class="section-title">Zone de sécurité « ${esc(f.zone.name)} »</div>
       <div class="segmented" id="zoneSeg">${ZONE_RADII.map(([r, l]) => `<button data-zone="${r}" class="${f.zone.radius === r ? 'active' : ''}">${l}</button>`).join('')}</div>
@@ -1508,7 +1639,7 @@
         </div>
         <div class="field"><label for="f-phone">Téléphone</label><input id="f-phone" name="phone" type="tel" ${full ? 'disabled' : ''} /></div>
         <button class="btn block" type="submit" ${full ? 'disabled' : ''}>${icon('plus')} Créer l’invitation</button>
-        <p class="note" style="margin:8px 0 0">${full ? `Maximum atteint (${FAMILY_PLAN.max} membres).` : 'Un code est généré : saisi sur le téléphone de l’enfant, il lance le partage de position. L’enfant en est informé en permanence.'}</p>
+        <p class="note" style="margin:8px 0 0">${full ? `Maximum atteint (${FAMILY_PLAN.max} membres).` : 'Un code est généré : saisi sur le téléphone du membre, il lance le partage de position. Un enfant en est informé en permanence ; un adulte choisit lui-même de partager (par exemple pendant un trek) et peut arrêter à tout moment.'}</p>
       </form>
       <div class="section-title">SOS automatique</div>
       <div class="card"><p class="fiche-text" style="margin:0">Quand vous déclenchez un SOS, un message avec votre position est envoyé aux membres cochés « Reçoit mes SOS ».</p></div>
@@ -1517,7 +1648,11 @@
         <div class="fam-btns">
           <button class="btn ghost" id="demoZone">Léa sort / rentre de la zone</button>
           <button class="btn ghost" id="demoSos">Hugo déclenche un SOS</button>
+          <button class="btn ghost" id="demoLost">Lucas (trek au Canada) perd le réseau</button>
+          <button class="btn ghost" id="demoLate">Lucas : retour dépassé</button>
+          <button class="btn ghost" id="demoTrekSos">Lucas déclenche un SOS</button>
           <button class="btn ghost" id="demoChild">Voir l’écran d’un enfant</button>
+          <button class="btn ghost" id="demoTrek">Voir l’écran d’un randonneur</button>
         </div></details>
       <div class="section-title">Abonnement</div>
       <div class="card">
@@ -1540,7 +1675,30 @@
       <button class="btn ghost block" id="childBack" style="margin-top:12px">Revenir à l’appareil du parent</button>
       <p class="note">Écran de démonstration de l’appareil d’un enfant.</p>`;
   }
-  const viewFamily = () => (!famActive() ? viewFamilyPaywall() : fam().role === 'child' ? viewFamilyChild() : viewFamilyParent());
+  const guardianNames = () => [`${state.profile.firstName} ${state.profile.lastName}`, ...fam().members.filter((m) => m.kind === 'adult' && m.status === 'active').map((m) => m.name)];
+  function viewFamilyTrek() {
+    const tk = fam().myTrek, tags = `<div class="tags">${guardianNames().map((g) => `<span class="tag teal">${esc(g)}</span>`).join('')}</div>`;
+    const d = new Date(Date.now() + 30 * 3600e3); d.setMinutes(0, 0, 0); const dflt = new Date(d - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+    const back = '<button class="btn ghost block" id="childBack" style="margin-top:12px">Revenir à l’appareil du parent</button>';
+    if (!tk) {
+      return `<div class="fam-hero on"><div class="ico">${icon('mountain')}</div><div><small>Option Famille</small><h1>Ma sortie</h1></div></div>
+        <p class="page-sub">Partez sereinement : votre famille voit votre position et sait quand vous devez rentrer.</p>
+        <form class="card" id="trekForm">
+          <div class="field"><label for="t-name">Nom de la sortie</label><input id="t-name" name="name" value="Trek dans les Rocheuses canadiennes" required /></div>
+          <div class="field"><label for="t-back">Retour prévu</label><input id="t-back" name="back" type="datetime-local" value="${dflt}" required /></div>
+          <button class="btn block" type="submit">${icon('pin')} Démarrer la sortie</button>
+          <p class="note" style="margin:8px 0 0">Vous choisissez de partager votre position et pouvez l’arrêter à tout moment.</p>
+        </form>
+        <div class="card"><div class="section-title" style="margin-top:0">Qui verra ma position</div>${tags}</div>${back}`;
+    }
+    return `<div class="fam-banner"><span class="dot"></span><div><strong>Sortie en cours</strong><span>${esc(tk.name)} · retour prévu ${fmtWhen(tk.backBy)}</span></div></div>
+      <div class="card"><div class="section-title" style="margin-top:0">Qui voit ma position</div>${tags}
+        <p class="note" style="margin:10px 0 0">Sans réseau, la dernière position reste enregistrée et part dès que le réseau revient. Si vous ne rentrez pas à l’heure prévue, votre famille est alertée.</p></div>
+      <button class="btn teal block" id="trekOk">${icon('check')} Tout va bien</button>
+      <a class="btn red block" href="#/sos" style="margin-top:10px">${icon('phone')} SOS</a>
+      <button class="btn ghost block" id="trekEnd" style="margin-top:10px">Je suis rentré(e) : arrêter le partage</button>${back}`;
+  }
+  const viewFamily = () => (!famActive() ? viewFamilyPaywall() : fam().role === 'child' ? viewFamilyChild() : fam().role === 'trek' ? viewFamilyTrek() : viewFamilyParent());
 
   function bindFamily() {
     if (!famActive()) {
@@ -1558,16 +1716,42 @@
       });
       return;
     }
-    if (fam().role === 'child') {
+    if (fam().role === 'child' || fam().role === 'trek') {
       $('#childBack').addEventListener('click', () => { fam().role = 'parent'; saveFamily(); render(); });
+      if (fam().role === 'trek') {
+        const first = state.profile.firstName;
+        if ($('#trekForm')) $('#trekForm').addEventListener('submit', (e) => {
+          e.preventDefault(); const fd = new FormData(e.target);
+          fam().myTrek = { name: fd.get('name').trim(), backBy: new Date(fd.get('back')).getTime(), start: Date.now() };
+          addAlert('checkin', `Sortie démarrée : ${fam().myTrek.name}`); toast('Sortie démarrée : votre famille voit votre position'); render();
+        });
+        if ($('#trekOk')) $('#trekOk').addEventListener('click', () => { addAlert('checkin', `${first} : tout va bien`); toast('Message envoyé à votre famille'); });
+        if ($('#trekEnd')) $('#trekEnd').addEventListener('click', () => { addAlert('checkin', `${first} est rentré(e) : sortie terminée`); fam().myTrek = null; saveFamily(); toast('Partage arrêté'); render(); });
+      }
       return;
     }
-    const live = $('#famLive'), draw = () => { if ($('#famLive')) live.innerHTML = famLiveHtml(); };
+    seedFamily();
+    const live = $('#famLive'), draw = () => { if (!$('#famLive')) return; $('#famRescue').innerHTML = famRescueHtml(); live.innerHTML = famLiveHtml(); updateFamMap(); };
+    initFamMap();
     const find = (id) => fam().members.find((m) => m.id === id);
+    const copyRescue = (id) => {
+      const m = find(id), a = m.abs, text = `Recherche de ${m.name}. Dernière position connue : ${a.lat.toFixed(5)}, ${a.lon.toFixed(5)}, altitude ${a.alt} m, ${a.place}, vue ${ago(m.updated)}. Sortie : ${m.trek.name}, retour prévu ${fmtWhen(m.trek.backBy)}. Téléphone : ${m.phone}.`;
+      navigator.clipboard.writeText(text).then(() => toast('Position copiée : donnez-la aux secours'), () => toast(text));
+    };
     draw();
-    searchOrigin().then((o) => { famOrigin = o; draw(); });
+    searchOrigin().then((o) => { famOrigin = o; if (famMapState) famMapState.fitted = false; draw(); });
     famTimer = setInterval(() => { famTick(); draw(); }, 4000);
     live.addEventListener('click', (e) => {
+      const view = e.target.closest('[data-fview]');
+      if (view) focusFam(view.dataset.fview);
+      const ping = e.target.closest('[data-fping]'), cp = e.target.closest('[data-fcopy]');
+      if (ping) {
+        const m = find(ping.dataset.fping); addAlert('ping', `Demande de signe de vie envoyée à ${m.name}`, m.id);
+        if (m.trek && !m.trek.signal) toast('Sans réseau : il la recevra au retour du signal');
+        else setTimeout(() => { addAlert('checkin', `${m.name} : tout va bien`, m.id); toast(`${m.name} : tout va bien`); draw(); }, 2500);
+        draw();
+      }
+      if (cp) copyRescue(cp.dataset.fcopy);
       const del = e.target.closest('[data-fdel]'), inv = e.target.closest('[data-finvite]'), acc = e.target.closest('[data-faccept]');
       if (del) { fam().members = fam().members.filter((m) => m.id !== del.dataset.fdel); saveFamily(); draw(); toast('Membre retiré'); }
       if (inv) {
@@ -1580,6 +1764,7 @@
         saveFamily(); draw(); toast(`${m.name} a rejoint la famille`);
       }
     });
+    $('#famRescue').addEventListener('click', (e) => { const cp = e.target.closest('[data-fcopy]'); if (cp) copyRescue(cp.dataset.fcopy); });
     live.addEventListener('change', (e) => {
       const sw = e.target.closest('[data-fsos]');
       if (sw) { find(sw.dataset.fsos).sos = sw.checked; saveFamily(); }
@@ -1599,6 +1784,24 @@
       const m = fam().members.find((x) => x.id === 'm2') || fam().members.find((x) => x.kind === 'child' && x.status === 'active'); if (!m) return;
       addAlert('sos', `SOS de ${m.name} : besoin d’aide`, m.id); toast(`🚨 SOS de ${m.name}`); if (navigator.vibrate) navigator.vibrate([200, 100, 200]); draw();
     });
+    const luc = () => fam().members.find((m) => m.id === 'm4');
+    $('#demoLost').addEventListener('click', () => {
+      const m = luc(); if (!m) return; const tk = m.trek;
+      if (tk.signal) { tk.signal = false; m.updated = Date.now() - 3 * 3600e3; addAlert('no-signal', `Plus de signal depuis 3 h : ${m.name}`, m.id); toast(`Plus de signal : ${m.name}`); }
+      else { tk.signal = true; m.updated = Date.now(); addAlert('checkin', `Le signal de ${m.name} est revenu`, m.id); }
+      saveFamily(); draw();
+    });
+    $('#demoLate').addEventListener('click', () => {
+      const m = luc(); if (!m) return; const tk = m.trek;
+      if (tk.backBy > Date.now()) { tk.backBy = Date.now() - 2 * 3600e3; tk.overdueAlert = true; addAlert('overdue', `Retour dépassé : ${m.name} (prévu ${fmtWhen(tk.backBy)})`, m.id); toast(`Retour dépassé : ${m.name}`); }
+      else { tk.backBy = Date.now() + 30 * 3600e3; tk.overdueAlert = false; }
+      saveFamily(); draw();
+    });
+    $('#demoTrekSos').addEventListener('click', () => {
+      const m = luc(); if (!m) return; m.sosAt = Date.now();
+      addAlert('sos', `SOS de ${m.name} : besoin d’aide`, m.id); toast(`🚨 SOS de ${m.name}`); if (navigator.vibrate) navigator.vibrate([200, 100, 200]); saveFamily(); draw();
+    });
+    $('#demoTrek').addEventListener('click', () => { fam().role = 'trek'; saveFamily(); render(); });
     $('#demoChild').addEventListener('click', () => { fam().role = 'child'; saveFamily(); render(); });
     $('#famCancel').addEventListener('click', () => { $('#famCancelConfirm').hidden = false; });
     $('#famCancelNo').addEventListener('click', () => { $('#famCancelConfirm').hidden = true; });
@@ -1737,7 +1940,7 @@
     'first-aid': { view: viewFirstAid },
     teleconsult: { view: viewTeleconsult, bind: bindTeleconsult },
     doctor: { view: viewDoctor, bind: bindDoctor },
-    place: { view: viewPlace, bind: bindPlace, tab: 'around' },
+    place: { view: viewPlace, bind: bindPlace, cleanup: cleanupPlace, tab: 'around' },
     'join-doctor': { view: viewJoinDoctor, bind: bindJoinDoctor },
     meds: { view: viewMeds, bind: bindMeds },
     contacts: { view: viewContacts, bind: bindContacts },

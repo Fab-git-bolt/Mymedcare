@@ -683,3 +683,27 @@ a.dist { color: inherit; }
 .fam-item .body span.fam-live { display: flex; align-items: center; gap: 6px; }
 .fam-live i { display: block; flex: none; }
 .fam-banner + .card, .fam-banner ~ .btn { margin-bottom: 12px; }
+.fam-trek, .fam-pos { display: block; margin-top: 6px; font-size: 12.5px; line-height: 1.45; color: var(--ink-700); }
+.fam-trek b { color: var(--ink-900); }
+.fam-rescue { margin: 8px 0 4px; border: 2px solid var(--red-500); background: var(--red-100); }
+.fam-rescue strong { display: flex; align-items: center; gap: 8px; color: var(--red-ink); font-size: 15.5px; }
+.fam-rescue strong svg { width: 18px; height: 18px; }
+.fam-rescue p { margin: 8px 0 0; font-size: 13.5px; line-height: 1.5; color: var(--ink-900); }
+.fam-rescue small { display: block; margin-top: 10px; font-size: 12px; color: var(--ink-700); }
+
+/* Cartes (Leaflet) */
+.fam-mapwrap { margin-top: 10px; }
+#famMapBox, .place-map { height: 320px; border-radius: var(--radius-md); overflow: hidden; box-shadow: var(--shadow-sm); background: var(--blue-50); }
+.place-map { height: 220px; margin: 12px 0; }
+.leaflet-container { position: relative; z-index: 0; font-family: inherit; }
+.leaflet-control-layers { border-radius: 12px; box-shadow: var(--shadow-sm); border: 0; }
+.leaflet-control-layers-expanded { padding: 6px 10px; font-size: 12.5px; color: #0F2236; }
+.map-pin-wrap { background: none; border: 0; }
+.map-pin { display: grid; letter-spacing: -.02em; place-items: center; width: 30px; height: 30px; border-radius: 50%; border: 3px solid #fff; color: #fff; font-size: 11.5px; font-weight: 800; box-shadow: 0 2px 8px rgba(15, 34, 54, .35); }
+.map-pin.in { background: #35B0B5; }
+.map-pin.out { background: #F04A4F; }
+.map-pin.trek { background: #E0801F; }
+.map-pin.home { background: #2A6AA2; width: 26px; height: 26px; margin: 2px; }
+.map-pin.place { background: #2A6AA2; }
+.fam-chips { display: flex; gap: 8px; overflow-x: auto; padding: 10px 0 2px; }
+.fam-chips button { flex: none; padding: 7px 12px; border-radius: 999px; background: var(--surface); box-shadow: var(--shadow-sm); font-size: 13px; font-weight: 700; color: var(--ink-700); }
