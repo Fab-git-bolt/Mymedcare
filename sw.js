@@ -1,9 +1,9 @@
 /* Service worker : rend l'application disponible hors ligne */
-const CACHE = 'mymedcare-v13';
+const CACHE = 'mymedcare-v14';
 const ASSETS = ['./', 'index.html', 'styles.css', 'app.js', 'assets/logo.svg', 'manifest.webmanifest', 'assets/vendor/leaflet.js', 'assets/vendor/leaflet.css'];
 
 self.addEventListener('install', (e) => {
-  e.waitUntil(caches.open(CACHE).then((c) => c.addAll(ASSETS)).then(() => self.skipWaiting()));
+  e.waitUntil(caches.open(CACHE).then((c) => c.addAll(ASSETS.map((u) => new Request(u, { cache: 'reload' })))).then(() => self.skipWaiting()));
 });
 
 self.addEventListener('activate', (e) => {
@@ -18,7 +18,7 @@ self.addEventListener('fetch', (e) => {
   const url = new URL(e.request.url);
   if (e.request.method !== 'GET' || url.origin !== self.location.origin) return;
   e.respondWith(
-    fetch(e.request)
+    fetch(e.request, { cache: 'no-cache' })
       .then((res) => {
         const copy = res.clone();
         caches.open(CACHE).then((c) => c.put(e.request, copy));
