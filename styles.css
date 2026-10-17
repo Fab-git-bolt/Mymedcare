@@ -709,3 +709,7 @@ a.dist { color: inherit; }
 .fam-chips button { flex: none; padding: 7px 12px; border-radius: 999px; background: var(--surface); box-shadow: var(--shadow-sm); font-size: 13px; font-weight: 700; color: var(--ink-700); }
 .leaflet-container.no-tiles { background-color: var(--blue-50); background-image: linear-gradient(var(--line) 1px, transparent 1px), linear-gradient(90deg, var(--line) 1px, transparent 1px); background-size: 40px 40px; }
 .map-note { position: absolute; left: 10px; right: 10px; bottom: 28px; z-index: 1000; padding: 8px 10px; border-radius: 10px; background: var(--surface); color: var(--ink-700); font-size: 12px; line-height: 1.4; box-shadow: var(--shadow-sm); }
+
+/* Autour de moi : Sur place / En vidéo */
+.mode-seg button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
+.mode-seg button svg { flex: none; }

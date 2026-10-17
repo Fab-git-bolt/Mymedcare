@@ -106,7 +106,7 @@
     fr: {
       hello: 'Bonjour', home: 'Accueil', around: 'Autour', sos: 'SOS', file: 'Ma fiche', outdoor: 'Outdoor',
       sosUrgence: 'URGENCE', sosTitle: 'Besoin d’aide ?', sosDesc: 'Appuyez pour alerter les secours et vos proches avec votre position.',
-      services: 'Services', translation: 'Traduction', hospitals: 'Hôpitaux', pharmacies: 'Pharmacies', doctors: 'Médecins', vets: 'Vétérinaires', family: 'Famille', familySub: 'Suivi & alertes · Premium',
+      services: 'Services', translation: 'Traduction', hospitals: 'Hôpitaux', pharmacies: 'Pharmacies', doctors: 'Médecins', vets: 'Vétérinaires', aroundMe: 'Autour de moi', family: 'Famille', familySub: 'Suivi & alertes · Premium',
       translationSub: 'Phrases médicales', hospitalsSub: 'Urgences proches', pharmaciesSub: 'Ouvertes près de vous', doctorsSub: 'Généralistes & spécialistes', vetsSub: 'Soins pour vos animaux',
       fileSub: 'Dossier médical', outdoorSub: 'Montagne & aventure', teleconsult: 'Téléconsultation', teleconsultSub: 'Un médecin en vidéo',
       meds: 'Médicaments', medsSub: 'Rappels de prise', contacts: 'Proches', contactsSub: 'Contacts d’urgence', firstAid: 'Premiers secours', firstAidSub: 'Gestes qui sauvent',
@@ -120,7 +120,7 @@
     en: {
       hello: 'Hello', home: 'Home', around: 'Nearby', sos: 'SOS', file: 'My file', outdoor: 'Outdoor',
       sosUrgence: 'EMERGENCY', sosTitle: 'Need help?', sosDesc: 'Tap to alert emergency services and your contacts with your location.',
-      services: 'Services', translation: 'Translation', hospitals: 'Hospitals', pharmacies: 'Pharmacies', doctors: 'Doctors', vets: 'Vets', family: 'Family', familySub: 'Tracking & alerts · Premium',
+      services: 'Services', translation: 'Translation', hospitals: 'Hospitals', pharmacies: 'Pharmacies', doctors: 'Doctors', vets: 'Vets', aroundMe: 'Around me', family: 'Family', familySub: 'Tracking & alerts · Premium',
       translationSub: 'Medical phrases', hospitalsSub: 'Nearby ER', pharmaciesSub: 'Open near you', doctorsSub: 'GPs & specialists', vetsSub: 'Care for your pets',
       fileSub: 'Medical record', outdoorSub: 'Mountain & adventure', teleconsult: 'Teleconsultation', teleconsultSub: 'See a doctor by video',
       meds: 'Medication', medsSub: 'Intake reminders', contacts: 'Contacts', contactsSub: 'Emergency contacts', firstAid: 'First aid', firstAidSub: 'Life-saving actions',
@@ -390,10 +390,7 @@
   // Accueil simplifié : le bouton SOS au centre, les fonctions principales autour
   const ORBIT = [
     { href: '#/translate', ic: 'translate', color: 'o-blue', key: 'translation' },
-    { href: '#/places/hospitals', ic: 'hospital', color: 'o-red', key: 'hospitals' },
-    { href: '#/places/pharmacies', ic: 'pharmacy', color: 'o-green', key: 'pharmacies' },
-    { href: '#/places/doctors', ic: 'doctor', color: 'o-teal', key: 'doctors' },
-    { href: '#/places/vets', ic: 'paw', color: 'o-amber', key: 'vets' },
+    { href: '#/places/hospitals', ic: 'pin', color: 'o-red', key: 'aroundMe' },
     { href: '#/outdoor', ic: 'mountain', color: 'o-moss', key: 'outdoor' },
     { href: '#/profile', ic: 'id', color: 'o-violet', key: 'file' },
   ];
@@ -402,9 +399,12 @@
     const n = ORBIT.length;
     // Positions sur un cercle (en % du carré), en partant d'en haut à gauche,
     // symétriques par rapport à l'axe vertical quel que soit le nombre de fonctions
+    const R = n <= 4 ? 46.7 : 37;
     const pos = ORBIT.map((_, i) => {
+      // 4 icônes : aux quatre coins, assez loin du bouton SOS pour que les étiquettes restent lisibles
+      if (n <= 4) return { x: 50 + (i === 1 || i === 2 ? 33 : -33), y: 50 + (i >= 2 ? 33 : -33) };
       const a = (-90 - 180 / n + i * (360 / n)) * Math.PI / 180;
-      return { x: 50 + 37 * Math.cos(a), y: 50 + 37 * Math.sin(a) };
+      return { x: 50 + R * Math.cos(a), y: 50 + R * Math.sin(a) };
     });
     return `
       <section class="r-home">
@@ -415,7 +415,7 @@
         </div>
         <div class="orbit">
           <svg class="orbit-lines" viewBox="0 0 100 100" aria-hidden="true">
-            <circle cx="50" cy="50" r="37" />
+            <circle cx="50" cy="50" r="${R}" />
             ${pos.map((q) => `<line x1="50" y1="50" x2="${q.x.toFixed(2)}" y2="${q.y.toFixed(2)}" />`).join('')}
           </svg>
           ${ORBIT.map((o, i) => `
@@ -426,7 +426,6 @@
           <a class="r-sos" href="#/sos" aria-label="SOS urgence"><span>SOS</span><small>${t('sosUrgence')}</small></a>
         </div>
         <div class="r-more">
-          <a href="#/teleconsult">${icon('video')}${t('teleconsult')}</a>
           <a href="#/first-aid">${icon('heart')}${t('firstAid')}</a>
           <a href="#/family">${icon('shield')}${t('family')}</a>
         </div>
@@ -491,6 +490,7 @@
       </div>`;
   }
   function bindHome() {
+    placeMode = 'site';
     $('#langSelect').addEventListener('change', (e) => setLang(e.target.value));
   }
 
@@ -573,6 +573,7 @@
     const tr = travel(x.d), g = placeInfo(x);
     const badges = [
       x.specialty ? `<em class="badge info">${esc(x.specialty)}</em>` : '',
+      partnerVideo(x) ? `<em class="badge info">${icon('video', 'width="12" height="12"')} Vidéo</em>` : '',
       x.tag ? `<em class="badge ${/urgence|24|ouvert|garde|sans/i.test(x.tag) ? 'open' : 'info'}">${esc(x.tag)}</em>` : '',
     ].join('');
     return `
@@ -603,19 +604,25 @@
     return { lat: town[1], lon: town[2], real: false, town: town[0] };
   }
 
+  let placeMode = 'site';
   function viewPlaces(type) {
     const cfg = PLACE_TYPES[type];
     if (!cfg) return viewNotFound();
+    const video = placeMode === 'video';
     return `
       <h1 class="page-title">${t(cfg.title)}</h1>
-      <p class="page-sub">Établissements partenaires de My Med Care autour de vous, du plus proche au plus éloigné.</p>
+      <p class="page-sub">${video ? 'Consultez en vidéo, où que vous soyez. Chaque professionnel affiche son tarif : forfait ou tarif horaire.' : 'Établissements partenaires de My Med Care autour de vous, du plus proche au plus éloigné.'}</p>
+      <div class="segmented mode-seg" id="modeSeg">
+        ${[['site', 'Sur place', 'pin'], ['video', 'En vidéo', 'video']].map(([k, l, ic]) => `<button data-mode="${k}" class="${placeMode === k ? 'active' : ''}">${icon(ic, 'width="15" height="15"')} ${l}</button>`).join('')}
+      </div>
       <div class="segmented" id="placeTabs">
         ${Object.keys(PLACE_TYPES).map((k) => `<button data-k="${k}" class="${k === type ? 'active' : ''}">${t(PLACE_TYPES[k].title)}</button>`).join('')}
       </div>
+      ${video ? `<div class="segmented" id="teleFilter">${[['all', 'Tous'], ['forfait', 'Forfait'], ['horaire', 'Tarif horaire']].map(([k, l]) => `<button data-f="${k}" class="${teleFilter === k ? 'active' : ''}">${l}</button>`).join('')}</div>` : `
       <div class="radius-row">
         <span>${icon('pin', 'class="inline-ico"')} Rayon autour de vous</span>
         <div class="segmented mini" id="radiusSeg">${RADII.map((r) => `<button data-r="${r}" class="${state.radius === r ? 'active' : ''}">${r} km</button>`).join('')}</div>
-      </div>
+      </div>`}
       <label class="search">${icon('search')}<input id="placeSearch" type="search" placeholder="${t('search')}" /></label>
       <div id="placeList"><div class="empty"><div class="spinner"></div>${t('locating')}</div></div>`;
   }
@@ -623,7 +630,27 @@
     const cfg = PLACE_TYPES[type];
     if (!cfg) return;
     let origin = null;
+    const video = placeMode === 'video';
+    const drawVideo = () => {
+      const f = ($('#placeSearch').value || '').trim().toLowerCase();
+      const items = allTeleDocs()
+        .filter((d) => (d.type || 'doctors') === type)
+        .filter((d) => !d.partnerId || d.country === countryCode())
+        .filter((d) => teleFilter === 'all' || d.priceType === teleFilter)
+        .filter((d) => !f || [d.name, d.spec, d.langs].join(' ').toLowerCase().includes(f))
+        .sort((a, b) => waitMin(a.wait) - waitMin(b.wait));
+      $('#placeList').innerHTML = `
+        <p class="note place-origin">${icon('video', 'class="inline-ico"')} ${items.length} professionnel(s) disponible(s) en vidéo, du plus rapide au plus lent.</p>
+        ${items.length ? `<div class="list">${items.map(teleItem).join('')}</div>` : '<div class="empty">Personne ne propose encore la vidéo dans cette catégorie.</div>'}
+        <div class="join-card">
+          <div class="ico c-teal">${icon('doctor')}</div>
+          <div class="body"><strong>Vous êtes professionnel de santé ?</strong><span>Rejoignez la plateforme et affichez votre tarif de téléconsultation.</span></div>
+          <a class="btn teal" href="#/join-doctor">Adhérer</a>
+        </div>`;
+      document.querySelectorAll('[data-go]').forEach((b) => b.addEventListener('click', () => { location.hash = b.dataset.go; }));
+    };
     const draw = () => {
+      if (video) return drawVideo();
       if (!origin) return;
       const f = ($('#placeSearch').value || '').trim().toLowerCase();
       const items = PARTNERS
@@ -647,8 +674,15 @@
       draw();
     };
     document.querySelectorAll('#placeTabs button').forEach((b) => b.addEventListener('click', () => { location.hash = '#/places/' + b.dataset.k; }));
+    document.querySelectorAll('#modeSeg button').forEach((b) => b.addEventListener('click', () => { placeMode = b.dataset.mode; render(); }));
+    document.querySelectorAll('#teleFilter button').forEach((b) => b.addEventListener('click', () => {
+      teleFilter = b.dataset.f;
+      document.querySelectorAll('#teleFilter button').forEach((x) => x.classList.toggle('active', x === b));
+      draw();
+    }));
     document.querySelectorAll('#radiusSeg button').forEach((b) => b.addEventListener('click', () => setRadius(Number(b.dataset.r))));
     $('#placeSearch').addEventListener('input', draw);
+    if (video) { draw(); return; }
     searchOrigin().then((o) => {
       if (currentRoute().name !== 'places' || currentRoute().arg !== type) return;
       origin = o; draw();
@@ -766,6 +800,7 @@
         ${g.phone ? `<a class="btn" href="${tel(g.phone)}">${icon('phone')} ${t('call')}</a>` : ''}
         <a class="btn ${g.phone ? 'ghost' : ''}" href="${mapsUrl(x.lat, x.lon)}" target="_blank" rel="noopener">${icon('nav')} ${t('route')}</a>
       </div>
+      ${partnerVideo(x) ? `<a class="btn teal block" href="#/doctor/pv-${esc(x.id)}" style="margin-top:10px">${icon('video')} Consulter en vidéo</a>` : ''}
       <div class="section-title">Coordonnées</div>
       <div class="card">
         ${g.address ? `<div class="kv"><span>Adresse</span><b>${esc(g.address)}</b></div>` : ''}
@@ -1057,6 +1092,14 @@
   const DOCS_ONLINE = [
     { id: 'd1', name: 'Dr Sophie Laurent', spec: 'Médecin généraliste', wait: '5 min', langs: 'FR · EN', priceType: 'forfait', price: 25, duration: 15, rating: 4.9, reviews: 312, years: 14, country: 'FR',
       bio: 'Médecin généraliste à Lyon, habituée aux problèmes de santé des voyageurs : infections, traumatismes légers, renouvellement de traitement.', education: ['Doctorat en médecine — Université Lyon 1', 'DU de médecine des voyages'] },
+    { id: 'v1', type: 'vets', name: 'Dr Camille Roche', spec: 'Vétérinaire · chiens et chats', wait: '10 min', langs: 'FR · EN', priceType: 'forfait', price: 30, duration: 15, rating: 4.8, reviews: 142, years: 10, country: 'FR',
+      bio: 'Vétérinaire à Lyon. Conseils à distance pour les animaux en voyage : piqûres, intoxications légères, mal des transports, que faire avant d’aller en clinique.', education: ['Doctorat vétérinaire — VetAgro Sup'] },
+    { id: 'v2', type: 'vets', name: 'Dr Marc Tremblay', spec: 'Vétérinaire · animaux de compagnie', wait: '15 min', langs: 'FR · EN', priceType: 'horaire', price: 80, rating: 4.7, reviews: 88, years: 14, country: 'CA',
+      bio: 'Vétérinaire à Calgary, habitué aux chiens de randonnée : blessures aux coussinets, morsures, coups de chaleur, rencontres avec la faune sauvage.', education: ['DMV — Université de Montréal'] },
+    { id: 'h1', type: 'hospitals', name: 'Clinique internationale — téléconseil infirmier', spec: 'Infirmier(ère) de triage', wait: '3 min', langs: 'FR · EN · DE', priceType: 'forfait', price: 20, duration: 15, rating: 4.6, reviews: 211, years: 8, country: 'CH',
+      bio: 'Un(e) infirmier(ère) évalue la gravité en vidéo et vous dit s’il faut aller aux urgences, voir un médecin ou attendre.', education: ['Diplôme d’infirmier(ère) — HES-SO'] },
+    { id: 'p1', type: 'pharmacies', name: 'Pharmacie de garde — conseil en vidéo', spec: 'Pharmacien(ne) · conseil', wait: '5 min', langs: 'FR · EN', priceType: 'forfait', price: 10, duration: 10, rating: 4.7, reviews: 76, years: 12, country: 'BE',
+      bio: 'Conseil sur un médicament, une interaction ou un équivalent local de votre traitement habituel.', education: ['Docteur en pharmacie — UCLouvain'] },
     { id: 'd2', name: 'Dr Antoine Moreau', spec: 'Pédiatre', wait: '12 min', langs: 'FR · ES', priceType: 'forfait', price: 35, duration: 20, rating: 4.8, reviews: 184, years: 11, country: 'BE',
       bio: 'Pédiatre à Bruxelles. Conseils pour les enfants en vacances : fièvre, déshydratation, piqûres, mal des transports.', education: ['Docteur en médecine — ULB', 'Spécialisation en pédiatrie — HUDERF'] },
     { id: 'd3', name: 'Dr Elena Rossi', spec: 'Dermatologue', wait: '20 min', langs: 'FR · IT · EN', priceType: 'horaire', price: 90, rating: 4.7, reviews: 97, years: 9, country: 'IT',
@@ -1073,67 +1116,44 @@
     : `Forfait : ${fmtEUR(d.price)} la consultation${d.duration ? ` (jusqu’à ${d.duration} min)` : ''}`;
   let teleFilter = 'all';
   let teleSelected = null;
-  const allTeleDocs = () => [...state.teleDocs.map((d) => ({ ...d, custom: true })), ...DOCS_ONLINE];
-
-  function viewTeleconsult() {
-    const docs = allTeleDocs().filter((d) => teleFilter === 'all' || d.priceType === teleFilter);
+  // Cabinets partenaires qui reçoivent aussi en vidéo (en production : déclaré par le professionnel)
+  const partnerVideo = (x) => (x.type === 'doctors' && hashOf(x.id) % 2 === 0) || (x.type === 'vets' && hashOf(x.id) % 3 === 0);
+  const partnerTeleDoc = (x) => {
+    const h = hashOf(x.id), vet = x.type === 'vets';
+    return {
+      id: 'pv-' + x.id, partnerId: x.id, type: x.type, name: x.name, spec: x.specialty || (vet ? 'Vétérinaire' : 'Médecin'),
+      wait: ['5 min', '10 min', '15 min'][h % 3], langs: 'Langue locale · EN', priceType: h % 2 ? 'forfait' : 'horaire',
+      price: vet ? (h % 2 ? 28 : 75) : (h % 2 ? 25 : 70), duration: 15, country: x.country,
+      rating: 4.2 + (h % 8) / 10, reviews: 20 + (h % 200), years: 5 + (h % 20),
+      bio: `${x.name} (${x.town}) reçoit aussi en vidéo : première évaluation, conseils et orientation avant ou après une visite sur place.`, education: [],
+    };
+  };
+  let partnerVideoDocs = null;
+  const allTeleDocs = () => {
+    partnerVideoDocs = partnerVideoDocs || PARTNERS.filter(partnerVideo).map(partnerTeleDoc);
+    return [...state.teleDocs.map((d) => ({ ...d, custom: true })), ...DOCS_ONLINE, ...partnerVideoDocs];
+  };
+  const countryCode = () => (COUNTRIES[state.country] ? state.country : 'FR');
+  const waitMin = (w) => (/h/.test(w) ? parseInt(w, 10) * 60 : parseInt(w, 10));
+  const TELE_KIND = { doctors: 'Médecin', vets: 'Vétérinaire', hospitals: 'Hôpital', pharmacies: 'Pharmacie' };
+  function teleItem(d) {
+    const cfg = PLACE_TYPES[d.type || 'doctors'];
     return `
-      <h1 class="page-title">${t('teleconsult')}</h1>
-      <p class="page-sub">Consultez un médecin en vidéo, 24h/24. Chaque médecin adhérent affiche son tarif : forfait par consultation ou tarif horaire.</p>
-      <div class="segmented" id="teleFilter">
-        ${[['all', 'Tous'], ['forfait', 'Forfait'], ['horaire', 'Tarif horaire']].map(([k, l]) => `<button data-f="${k}" class="${teleFilter === k ? 'active' : ''}">${l}</button>`).join('')}
-      </div>
-      <div class="list">
-        ${docs.map((d) => `
-          <div class="item doc-item${teleSelected === d.id ? ' selected' : ''}">
-            <div class="ico c-blue">${icon('doctor')}</div>
-            <div class="body">
-              <a class="item-link" href="#/doctor/${esc(d.id)}"><strong>${esc(d.name)}</strong></a>
-              <span>${esc(d.spec)} · ${esc(d.langs)} · <a class="link-accent" href="#/doctor/${esc(d.id)}">Voir la fiche</a></span>
-              <span class="badges">
-                ${d.custom ? '<em class="badge warn">Nouvel adhérent</em>' : `<em class="badge info">★ ${d.rating.toFixed(1).replace('.', ',')}</em>`}
-                <em class="badge open">${icon('clock', 'width="12" height="12"')} Attente ~${esc(d.wait)}</em>
-              </span>
-            </div>
-            <button class="price" data-consult="${esc(d.id)}" aria-label="Consulter ${esc(d.name)}, ${d.priceType === 'horaire' ? 'tarif horaire' : 'forfait'} ${fmtEUR(d.price)}">
-              <b>${priceMain(d)}</b>
-              <span>${icon('video')} Consulter</span>
-            </button>
-          </div>
-          ${teleSelected === d.id ? `
-          <div class="card consult-panel">
-            <strong>Consultation vidéo avec ${esc(d.name)}</strong>
-            <div class="kv"><span>Spécialité</span><b>${esc(d.spec)}</b></div>
-            <div class="kv"><span>Tarif fixé par le médecin</span><b>${d.priceType === 'horaire' ? fmtEUR(d.price) + ' / h' : fmtEUR(d.price)}</b></div>
-            <p class="note" style="margin:6px 0 0">${priceDetail(d)}. Votre fiche médicale est transmise au médecin au début de la consultation.</p>
-            ${d.custom ? `<button type="button" class="btn ghost block danger" data-remove-doc="${esc(d.id)}" style="margin-top:12px">${icon('trash')} Retirer ce médecin</button>` : ''}
-            <div class="btn-row"><button class="btn ghost" id="consultCancel">${t('cancel')}</button><button class="btn teal" id="consultStart">${icon('video')} Démarrer</button></div>
-          </div>` : ''}`).join('') || `<div class="empty">Aucun médecin pour ce type de tarif.</div>`}
-      </div>
-
-      <div class="join-card">
-        <div class="ico c-teal">${icon('doctor')}</div>
-        <div class="body"><strong>Vous êtes médecin ?</strong><span>Rejoignez la plateforme et affichez votre tarif de téléconsultation.</span></div>
-        <a class="btn teal" href="#/join-doctor">Adhérer</a>
+      <div class="item doc-item">
+        <div class="ico ${cfg.color}">${icon(cfg.icon)}</div>
+        <div class="body">
+          <a class="item-link" href="#/doctor/${esc(d.id)}"><strong>${esc(d.name)}</strong></a>
+          <span>${esc(d.spec)} · ${esc(d.langs)}</span>
+          <span class="badges">
+            ${d.custom ? '<em class="badge warn">Nouvel adhérent</em>' : `<em class="badge info">★ ${d.rating.toFixed(1).replace('.', ',')}</em>`}
+            <em class="badge open">${icon('clock', 'width="12" height="12"')} Attente ~${esc(d.wait)}</em>
+          </span>
+        </div>
+        <button class="price" data-go="#/doctor/${esc(d.id)}" aria-label="Consulter ${esc(d.name)}, ${d.priceType === 'horaire' ? 'tarif horaire' : 'forfait'} ${fmtEUR(d.price)}">
+          <b>${priceMain(d)}</b>
+          <span>${icon('video')} Consulter</span>
+        </button>
       </div>`;
-  }
-  function bindTeleconsult() {
-    document.querySelectorAll('#teleFilter button').forEach((b) => b.addEventListener('click', () => { teleFilter = b.dataset.f; teleSelected = null; render(); }));
-    document.querySelectorAll('[data-consult]').forEach((b) => b.addEventListener('click', () => {
-      teleSelected = teleSelected === b.dataset.consult ? null : b.dataset.consult;
-      const y = $('#app').scrollTop; render(); $('#app').scrollTop = y; window.scrollTo(0, y);
-    }));
-    const cancel = $('#consultCancel');
-    if (cancel) cancel.addEventListener('click', () => { teleSelected = null; const y = $('#app').scrollTop; render(); $('#app').scrollTop = y; });
-    const start = $('#consultStart');
-    if (start) start.addEventListener('click', () => {
-      const d = allTeleDocs().find((x) => x.id === teleSelected);
-      toast(`Connexion avec ${d.name}…`);
-    });
-    document.querySelectorAll('[data-remove-doc]').forEach((b) => b.addEventListener('click', () => {
-      state.teleDocs = state.teleDocs.filter((d) => d.id !== b.dataset.removeDoc);
-      store.set('teleDocs', state.teleDocs); teleSelected = null; toast('Médecin retiré'); render();
-    }));
   }
 
   /* --- Fiche d'un médecin de téléconsultation --- */
@@ -1147,7 +1167,7 @@
       <div class="doc-hero">
         <div class="doc-avatar">${esc(init)}</div>
         <div class="body">
-          <small>${d.custom ? 'Nouvel adhérent' : 'Médecin adhérent · téléconsultation'}</small>
+          <small>${d.custom ? 'Nouvel adhérent' : `${TELE_KIND[d.type || 'doctors']} · en vidéo`}</small>
           <h1>${esc(d.name)}</h1>
           <span>${esc(d.spec)}${c ? ` · exerce en ${esc(c.name)} ${c.flag}` : ''}</span>
           <div class="doc-stats">
@@ -1164,12 +1184,13 @@
         <div class="body">
           <strong>${d.priceType === 'horaire' ? 'Tarif horaire' : 'Forfait par consultation'}</strong>
           <span>${priceDetail(d)}.</span>
-          <span>Tarif fixé par le médecin.</span>
+          <span>Tarif fixé par le professionnel.</span>
         </div>
       </div>
 
       <div class="section-title">Prochaines disponibilités</div>
       <div class="slots" id="slots">${slots.map((sl, i) => `<button class="${i === 0 ? 'active' : ''}" data-slot="${esc(sl)}">${esc(sl)}</button>`).join('')}</div>
+      ${d.partnerId ? `<a class="btn ghost block" href="#/place/${esc(d.partnerId)}" style="margin-top:10px">${icon('pin')} Voir la fiche du cabinet</a>` : ''}
       <button class="btn teal block" id="docStart" style="margin-top:14px">${icon('video')} Démarrer la téléconsultation · ${d.priceType === 'horaire' ? fmtEUR(d.price) + ' / h' : fmtEUR(d.price)}</button>
 
       <div class="section-title">Présentation</div>
@@ -1189,7 +1210,7 @@
         <div class="card review"><b>★★★★★</b><p>« Réponse rapide alors que j’étais en randonnée. Très rassurant. »</p><small>Patient vérifié · il y a 2 semaines</small></div>
         <div class="card review"><b>★★★★★</b><p>« Explications claires et ordonnance reçue tout de suite. »</p><small>Patient vérifié · il y a 1 mois</small></div>
       </div>`}
-      <p class="note">Médecin fictif, présenté comme exemple dans ce prototype.</p>`;
+      <p class="note">Prestataire fictif, présenté comme exemple dans ce prototype.</p>`;
   }
   function bindDoctor(id) {
     const d = allTeleDocs().find((x) => x.id === id);
@@ -1261,7 +1282,7 @@
         wait: fd.get('wait'), rpps: String(fd.get('rpps') || '').trim(),
       };
       state.teleDocs.unshift(doc); store.set('teleDocs', state.teleDocs);
-      teleFilter = 'all'; teleSelected = null;
+      teleFilter = 'all'; teleSelected = null; placeMode = 'video';
       toast('Profil publié : ' + name);
       location.hash = '#/teleconsult';
     });
@@ -1947,7 +1968,7 @@
     profile: { view: viewProfile, bind: bindProfile, tab: 'file' },
     outdoor: { view: viewOutdoor, bind: bindOutdoor, cleanup: cleanupOutdoor, tab: 'outdoor' },
     'first-aid': { view: viewFirstAid },
-    teleconsult: { view: viewTeleconsult, bind: bindTeleconsult },
+    teleconsult: { view: () => '', bind: () => { placeMode = 'video'; location.replace('#/places/doctors'); } },
     doctor: { view: viewDoctor, bind: bindDoctor },
     place: { view: viewPlace, bind: bindPlace, cleanup: cleanupPlace, tab: 'around' },
     'join-doctor': { view: viewJoinDoctor, bind: bindJoinDoctor },
